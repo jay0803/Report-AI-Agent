@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시작 - Virtual Desk Assistant</title>
+    <link rel="stylesheet" href="/static/Start/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="start-box">
+            <div class="welcome-section">
+                <h1 class="welcome-text">환영합니다!</h1>
+                <p class="user-name" id="userName">사용자님</p>
+            </div>
+
+            <div class="action-section">
+                <button class="start-btn" id="startBtn">
+                    <span class="btn-text">시작하기</span>
+                </button>
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+
+            <div class="guide-section">
+                <h3 class="guide-title">📖 사용 방법</h3>
+                <div class="guide-list">
+                    <div class="guide-item">
+                        <span class="guide-icon">💬</span>
+                        <span class="guide-text"><strong>Cmd/Ctrl + Enter</strong> 채팅창 토글</span>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-icon">🔍</span>
+                        <span class="guide-text"><strong>+/-</strong> 키로 크기 조절</span>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-icon">👆</span>
+                        <span class="guide-text"><strong>드래그</strong>로 위치 이동</span>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-icon">⌨️</span>
+                        <span class="guide-text"><strong>ESC</strong> 키로 프로그램 종료</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/Start/script.js"></script>
+</body>
+</html>
+

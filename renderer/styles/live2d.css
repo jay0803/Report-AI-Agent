@@ -1,0 +1,36 @@
+/* ========================================
+ * Live2D 스테이지 (전체 화면)
+ * ======================================== */
+#stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none !important; /* 🔥 배경은 클릭 불가 */
+  z-index: 1 !important; /* 채팅창 아래 */
+}
+
+/* ⚠️ 중요: stage의 자식만 pointer-events 제어, 다른 요소 건드리지 않음 */
+#stage > * {
+  pointer-events: none !important; /* 🔥 stage의 직접 자식만 */
+}
+
+/* canvas는 클릭 가능 (Live2D 캐릭터 드래그) */
+#stage canvas {
+  pointer-events: auto !important;
+  cursor: move;
+  position: relative;
+  z-index: 1 !important;
+}
+
+/* 보고서 패널이 열려있을 때는 stage 완전 비활성화 */
+body.report-panel-active #stage,
+body.report-panel-active #stage *,
+body.report-panel-active #stage canvas {
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* 보고서 패널이 열려있을 때 다른 패널들 우선순위 낮춤 */
+body.report-panel-active #chat-panel {
+  z-index: 100 !important; /* 보고서 패널(99999)보다 낮게 */
+}
+

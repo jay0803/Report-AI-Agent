@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1a6f7f5f-be87-4ebf-bb76-8c7fe570c023",
+    "text": "보고서 타입: daily\n작성자: ",
+    "metadata": {
+      "chunk_type": "summary",
+      "report_id": "7ffb86f9-881b-4bd5-8f94-42968379ee7b",
+      "report_type": "daily",
+      "owner": "",
+      "task_count": 0,
+      "kpi_count": 0,
+      "issue_count": 0,
+      "plan_count": 0
+    }
+  }
+]
