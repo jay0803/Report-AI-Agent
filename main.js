@@ -228,13 +228,13 @@ ipcMain.on('va:request-quit', () => {
 });
 
 // 백엔드 서버가 준비될 때까지 대기하는 함수
-async function waitForBackend(maxRetries = 30) {
+async function waitForBackend(maxRetries = 60) {
   const http = require('http');
   
   for (let i = 0; i < maxRetries; i++) {
     try {
       await new Promise((resolve, reject) => {
-        const req = http.get('http://localhost:8000/health', (res) => {
+        const req = http.get('http://localhost:8000/health', { timeout: 2000 }, (res) => {
           if (res.statusCode === 200) {
             resolve();
           } else {
@@ -242,13 +242,18 @@ async function waitForBackend(maxRetries = 30) {
           }
         });
         req.on('error', reject);
-        req.setTimeout(1000);
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('Request timeout'));
+        });
       });
       
       console.log('✅ 백엔드 서버 준비 완료!');
       return true;
     } catch (err) {
-      console.log(`⏳ 백엔드 대기 중... (${i + 1}/${maxRetries})`);
+      if (i % 5 === 0 || i === maxRetries - 1) {  // 5초마다 또는 마지막에만 로그 출력
+        console.log(`⏳ 백엔드 대기 중... (${i + 1}/${maxRetries})`);
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
@@ -264,8 +269,14 @@ app.whenReady().then(async () => {
   
   // 백엔드 서버 시작
   console.log('🔧 백엔드 서버 시작 중...');
+  
+  // 작업 디렉토리를 프로젝트 루트로 설정
+  const path = require('path');
+  const projectRoot = __dirname;
+  
   backendProcess = spawn('python', ['assistant.py'], {
-    stdio: 'inherit',
+    cwd: projectRoot,  // 프로젝트 루트에서 실행
+    stdio: ['ignore', 'pipe', 'pipe'],  // stdout, stderr를 파이프로 받아서 처리
     shell: true,
     env: {
       ...process.env,
@@ -274,22 +285,38 @@ app.whenReady().then(async () => {
     }
   });
   
+  // 백엔드 출력을 콘솔로 전달
+  backendProcess.stdout.on('data', (data) => {
+    console.log(`[Backend] ${data.toString().trim()}`);
+  });
+  
+  backendProcess.stderr.on('data', (data) => {
+    console.error(`[Backend Error] ${data.toString().trim()}`);
+  });
+  
   backendProcess.on('error', (err) => {
     console.error('❌ 백엔드 서버 시작 실패:', err);
   });
   
-  backendProcess.on('exit', (code) => {
-    console.log(`📴 백엔드 서버 종료됨 (코드: ${code})`);
+  backendProcess.on('exit', (code, signal) => {
+    if (code !== null) {
+      console.log(`📴 백엔드 서버 종료됨 (코드: ${code})`);
+    } else {
+      console.log(`📴 백엔드 서버 종료됨 (시그널: ${signal})`);
+    }
   });
   
-  // 백엔드가 준비될 때까지 대기
-  const ready = await waitForBackend();
+  // 백엔드가 준비될 때까지 대기 (최대 60초)
+  const ready = await waitForBackend(60);
   
   if (ready) {
     // 백엔드 준비 완료 후 로그인 창 띄움
     createLoginWindow();
   } else {
     console.error('❌ 백엔드를 시작할 수 없습니다.');
+    if (backendProcess && !backendProcess.killed) {
+      backendProcess.kill('SIGTERM');
+    }
     app.quit();
   }
 });
