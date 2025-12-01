@@ -18,9 +18,9 @@ report_env_path = project_root / ".env.report"
 if report_env_path.exists():
     load_dotenv(report_env_path, override=False)
 
-from app.domain.report.service import ReportProcessingService
-from app.domain.report.chunker import chunk_canonical_report
-from app.domain.report.embedding_pipeline import get_embedding_pipeline
+from app.domain.report.core.service import ReportProcessingService
+from app.domain.report.core.chunker import chunk_canonical_report
+from app.domain.report.core.embedding_pipeline import get_embedding_pipeline
 
 
 DATA_DIR = project_root / "Data" / "mock_reports" / "daily"

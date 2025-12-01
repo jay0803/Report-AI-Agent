@@ -7,8 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from fastapi.responses import JSONResponse
 
-from app.domain.report.service import ReportProcessingService
-from app.domain.report.schemas import (
+from app.domain.report.core.service import ReportProcessingService
+from app.domain.report.core.schemas import (
     ReportParseResponse,
     ReportParseWithCanonicalResponse,
     ReportTypeDetectionResponse,
@@ -170,7 +170,7 @@ async def get_report_template(report_type: ReportType):
     보고서 타입에 따른 JSON 템플릿 반환
     
     Args:
-        report_type: 보고서 타입 (daily, weekly, monthly, performance)
+        report_type: 보고서 타입 (daily, weekly, monthly)
         
     Returns:
         JSON 템플릿

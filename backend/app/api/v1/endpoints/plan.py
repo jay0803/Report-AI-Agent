@@ -10,10 +10,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import date
 from sqlalchemy.orm import Session
 
-from app.domain.planner.schemas import TodayPlanRequest, TodayPlanResponse
-from app.domain.planner.today_plan_chain import TodayPlanGenerator
-from app.domain.planner.tools import YesterdayReportTool
-from app.domain.search.retriever import UnifiedRetriever
+from app.domain.report.planner.schemas import TodayPlanRequest, TodayPlanResponse
+from app.domain.report.planner.today_plan_chain import TodayPlanGenerator
+from app.domain.report.planner.tools import YesterdayReportTool
+from app.domain.report.search.retriever import UnifiedRetriever
 from app.infrastructure.database.session import get_db
 from app.llm.client import get_llm
 from app.core.config import settings
@@ -35,9 +35,12 @@ def get_today_plan_generator(db: Session = Depends(get_db)) -> TodayPlanGenerato
         vector_store = get_vector_store()
         collection = vector_store.get_collection()
         
+        import os
+        embedding_model_type = os.getenv("REPORT_EMBEDDING_MODEL_TYPE", "hf")
         vector_retriever = UnifiedRetriever(
             collection=collection,
-            openai_api_key=settings.OPENAI_API_KEY
+            openai_api_key=settings.OPENAI_API_KEY,
+            embedding_model_type=embedding_model_type
         )
         
         doc_count = collection.count()
@@ -77,6 +80,8 @@ async def generate_today_plan(
     
     except Exception as e:
         print(f"[ERROR] Today plan generation failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"일정 생성 실패: {str(e)}"

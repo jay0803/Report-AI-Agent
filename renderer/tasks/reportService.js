@@ -50,6 +50,17 @@ export async function handleDailyStart(addMessage, chatInput) {
     });
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: '알 수 없는 오류가 발생했습니다.' }));
+      
+      // main_tasks가 없는 경우 (400 에러)
+      if (response.status === 400 && errorData.detail && errorData.detail.includes('금일 업무 계획')) {
+        addMessage('assistant', '⚠️ 금일 업무 계획이 설정되지 않았습니다.\n\n먼저 "오늘 추천 업무" 기능을 사용하여 오늘의 업무를 설정해주세요. 📋');
+        // 추천 업무 기능으로 자동 이동 (taskService의 getTodayPlan 호출)
+        const { getTodayPlan } = await import('./taskService.js');
+        await getTodayPlan();
+        return;
+      }
+      
       throw new Error(`API 호출 실패: ${response.status}`);
     }
     

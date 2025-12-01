@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.reporting.pdf_generator.base import BasePDFGenerator
 from app.reporting.pdf_generator.utils import format_korean_date, truncate_text
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 
 
 class WeeklyReportPDFGenerator(BasePDFGenerator):
@@ -46,20 +46,20 @@ class WeeklyReportPDFGenerator(BasePDFGenerator):
         self.draw_text(175, self._to_pdf_y(107), 작성일자, font_size=11)  # TODO: 좌표 조정
         self.draw_text(340, self._to_pdf_y(107), 성명, font_size=11)  # TODO: 좌표 조정
         
+        if not report.weekly:
+            raise ValueError("CanonicalReport must have weekly data for weekly report PDF generation")
+        
+        weekly = report.weekly
+        
         # ========================================
         # 주간 업무 목표 (최대 3개)
-        # metadata의 weekly_goals 우선, 없으면 plans 사용
         # ========================================
-        주간_목표 = report.metadata.get('weekly_goals', [])
-        
-        # metadata에 없으면 plans 사용 (fallback)
-        if not 주간_목표 and report.plans:
-            주간_목표 = report.plans[:3]  # 최대 3개
+        주간_목표 = weekly.weekly_goals or []
         
         if 주간_목표:
             y_offset = 213  # TODO: 좌표 조정
             for idx, goal in enumerate(주간_목표[:3]):  # 최대 3개
-                goal_text = goal if isinstance(goal, str) else goal.get('title', str(goal))
+                goal_text = goal if isinstance(goal, str) else str(goal)
                 plan_text = f"{truncate_text(goal_text, 50)}"
                 self.draw_text(
                     x=180,  # TODO: 좌표 조정
@@ -70,12 +70,11 @@ class WeeklyReportPDFGenerator(BasePDFGenerator):
         
         # ========================================
         # 요일별 세부 업무 (월~금)
-        # LLM이 생성한 요약 결과만 사용 (원본 task 사용 안 함)
         # ========================================
         weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일']
         
-        # metadata에서 LLM 요약 결과 가져오기
-        daily_tasks_by_day = report.metadata.get('daily_tasks_by_day', {})
+        # weekday_tasks에서 요일별 업무 가져오기
+        weekday_tasks = weekly.weekday_tasks or {}
         
         table_start_y = 391  # TODO: 좌표 조정
         row_height = 49  # TODO: 요일별 행 높이 조정
@@ -83,14 +82,12 @@ class WeeklyReportPDFGenerator(BasePDFGenerator):
         for day_idx, weekday in enumerate(weekdays):
             current_y = self._to_pdf_y(table_start_y + (day_idx * row_height))
             
-            # 해당 요일의 LLM 요약 결과만 사용
-            # 원본 task는 절대 사용하지 않음
-            day_summary_tasks = daily_tasks_by_day.get(weekday, [])
+            # 해당 요일의 업무 목록
+            day_tasks = weekday_tasks.get(weekday, [])
             
-            # 요약 데이터가 있으면 출력, 없으면 비워둠 (fallback 없음)
-            if day_summary_tasks:
-                # LLM 요약 결과를 그대로 출력 (최대 3개)
-                task_texts = [f"• {truncate_text(task, 50)}" for task in day_summary_tasks[:3]]
+            if day_tasks:
+                # 업무 목록을 그대로 출력 (최대 3개)
+                task_texts = [f"• {truncate_text(task, 50)}" for task in day_tasks[:3]]
                 task_summary = "\n".join(task_texts)
                 
                 self.draw_multiline_text(
@@ -100,13 +97,11 @@ class WeeklyReportPDFGenerator(BasePDFGenerator):
                     font_size=9,
                     line_height=12
                 )
-            # else: 요약 데이터가 없으면 해당 요일은 비워둠 (아무것도 출력하지 않음)
         
         # ========================================
-        # 주간 중요 업무 (metadata에서 추출)
-        # 요일별 세부 업무에서 우선순위 높은 항목 3개
+        # 주간 중요 업무
         # ========================================
-        중요_업무_리스트 = report.metadata.get('important_tasks', [])
+        중요_업무_리스트 = weekly.weekly_highlights or []
         if 중요_업무_리스트:
             중요_업무_텍스트 = "\n".join([f"• {task}" for task in 중요_업무_리스트[:3]])
             self.draw_multiline_text(
@@ -118,14 +113,13 @@ class WeeklyReportPDFGenerator(BasePDFGenerator):
             )
         
         # ========================================
-        # 특이사항 / 이슈
+        # 특이사항
         # ========================================
-        if report.issues:
-            이슈_텍스트 = "\n".join([f"• {issue}" for issue in report.issues[:3]])
+        if weekly.notes:
             self.draw_multiline_text(
                 x=130,  # TODO: 좌표 조정
                 y=self._to_pdf_y(745),
-                text=이슈_텍스트,
+                text=weekly.notes,
                 font_size=10,
                 line_height=14
             )

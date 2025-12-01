@@ -14,17 +14,17 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import os
 
-from app.domain.daily.fsm_state import DailyFSMContext
-from app.domain.daily.time_slots import generate_time_slots
-from app.domain.daily.task_parser import TaskParser
-from app.domain.daily.daily_fsm import DailyReportFSM
-from app.domain.daily.daily_builder import build_daily_report
-from app.domain.daily.session_manager import get_session_manager
-from app.domain.daily.main_tasks_store import get_main_tasks_store
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.daily.schemas import DailyReportCreate
+from app.domain.report.daily.fsm_state import DailyFSMContext
+from app.domain.report.daily.time_slots import generate_time_slots
+from app.domain.report.daily.task_parser import TaskParser
+from app.domain.report.daily.daily_fsm import DailyReportFSM
+from app.domain.report.daily.daily_builder import build_daily_report
+from app.domain.report.daily.session_manager import get_session_manager
+from app.domain.report.daily.main_tasks_store import get_main_tasks_store
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.daily.schemas import DailyReportCreate
 from app.llm.client import get_llm
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import get_db
 from app.reporting.pdf_generator.daily_report_pdf import DailyReportPDFGenerator
 from ingestion.auto_ingest import ingest_single_report
@@ -91,10 +91,13 @@ async def start_daily_report(request: DailyStartRequest):
             target_date=request.target_date
         )
         
-        # main_tasks가 없으면 빈 리스트로 설정 (경고 메시지 출력)
-        if main_tasks is None:
+        # main_tasks가 없으면 에러 반환 (프론트엔드에서 추천 업무 기능으로 리다이렉트)
+        if main_tasks is None or len(main_tasks) == 0:
             print(f"[WARNING] main_tasks가 저장되지 않음: {request.owner}, {request.target_date}")
-            main_tasks = []
+            raise HTTPException(
+                status_code=400,
+                detail="금일 업무 계획이 설정되지 않았습니다. 먼저 '금일 추천 업무' 기능을 사용하여 오늘의 업무를 설정해주세요."
+            )
         
         # FSM 컨텍스트 생성
         context = DailyFSMContext(
@@ -220,7 +223,7 @@ async def answer_daily_question(
                         }
                     }
                     
-                    from app.domain.daily.schemas import DailyReportUpdate
+                    from app.domain.report.daily.schemas import DailyReportUpdate
                     db_report = DailyReportRepository.update(
                         db,
                         existing_report,
@@ -260,6 +263,8 @@ async def answer_daily_question(
                     print(f"📄 일일 보고서 PDF 생성 완료: backend/output/report_result/daily/{pdf_filename}")
                 except Exception as pdf_error:
                     print(f"⚠️  PDF 생성 실패 (보고서는 저장됨): {str(pdf_error)}")
+                    import traceback
+                    traceback.print_exc()
                 
                 # 🔥 벡터 DB 자동 저장 (비동기 작업, 실패해도 계속 진행)
                 try:
@@ -395,7 +400,7 @@ async def select_main_tasks(
                 report_json["metadata"] = report_json.get("metadata", {})
                 report_json["metadata"]["status"] = "in_progress"
                 
-                from app.domain.daily.schemas import DailyReportUpdate
+                from app.domain.report.daily.schemas import DailyReportUpdate
                 DailyReportRepository.update(
                     db,
                     existing_report,
@@ -546,7 +551,7 @@ async def update_main_tasks(
                 if "metadata" not in report_json:
                     report_json["metadata"] = {}
                 
-                from app.domain.daily.schemas import DailyReportUpdate
+                from app.domain.report.daily.schemas import DailyReportUpdate
                 DailyReportRepository.update(
                     db,
                     existing_report,

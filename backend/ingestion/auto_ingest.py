@@ -15,9 +15,9 @@ report_env_path = project_root / ".env.report"
 if report_env_path.exists():
     load_dotenv(report_env_path, override=False)
 
-from app.domain.report.canonical_models import CanonicalReport
-from app.domain.report.chunker import chunk_canonical_report
-from app.domain.report.embedding_pipeline import get_embedding_pipeline
+from app.domain.report.core.canonical_models import CanonicalReport
+from app.domain.report.core.chunker import chunk_canonical_report
+from app.domain.report.core.embedding_pipeline import get_embedding_pipeline
 
 
 BATCH_SIZE = 50

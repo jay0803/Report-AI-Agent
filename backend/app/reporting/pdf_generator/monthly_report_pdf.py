@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.reporting.pdf_generator.base import BasePDFGenerator
 from app.reporting.pdf_generator.utils import format_korean_date, truncate_text
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 
 
 class MonthlyReportPDFGenerator(BasePDFGenerator):
@@ -47,40 +47,33 @@ class MonthlyReportPDFGenerator(BasePDFGenerator):
         self.draw_text(170, self._to_pdf_y(106), 작성일자, font_size=11)  # TODO: 좌표 조정
         self.draw_text(340, self._to_pdf_y(106), 성명, font_size=11)  # TODO: 좌표 조정
         
-        # ========================================
-        # 월간 핵심 지표 (KPIs)
-        # ========================================
-        kpi_start_y = 180  # TODO: 좌표 조정
+        if not report.monthly:
+            raise ValueError("CanonicalReport must have monthly data for monthly report PDF generation")
         
-        if report.kpis:
-            for idx, kpi in enumerate(report.kpis[:5]):  # 최대 5개
-                kpi_text = f"{kpi.kpi_name}: {kpi.value} {kpi.unit or ''}"
-                self.draw_text(
-                    x=170,  # TODO: 좌표 조정
-                    y=self._to_pdf_y(kpi_start_y + (idx * 30)),
-                    text=kpi_text,
-                    font_size=10
-                )
+        monthly = report.monthly
+        
+        print(f"📄 월간보고서 PDF 생성 시작")
+        print(f"   Owner: {report.owner}, Period: {report.period_start}~{report.period_end}")
+        print(f"   Weekly summaries keys: {list(monthly.weekly_summaries.keys())}")
+        print(f"   Weekly summaries count: {len(monthly.weekly_summaries)}")
+        print(f"   Next month plan: {monthly.next_month_plan[:50] if monthly.next_month_plan else 'None'}...")
         
         # ========================================
         # 주차별 세부 업무 (1주차 ~ 4/5주차)
         # ========================================
         weeks = ['1주차', '2주차', '3주차', '4주차', '5주차']
-        tasks_per_week = len(report.tasks) // 4 if len(report.tasks) >= 4 else 1
         table_start_y = 391  # TODO: 좌표 조정
         row_height = 60  # TODO: 주차별 행 높이 조정
         
         for week_idx, week in enumerate(weeks[:4]):  # 보통 4주차까지
             current_y = self._to_pdf_y(table_start_y + (week_idx * row_height))
             
-            
             # 해당 주차의 업무들
-            start_task = week_idx * tasks_per_week
-            end_task = start_task + tasks_per_week
-            week_tasks = report.tasks[start_task:end_task]
+            week_tasks = monthly.weekly_summaries.get(week, [])
             
             if week_tasks:
-                task_texts = [f"• {truncate_text(t.title, 30)}" for t in week_tasks[:3]]
+                print(f"   {week}: {len(week_tasks)}개 업무")
+                task_texts = [f"• {truncate_text(task, 30)}" for task in week_tasks[:3]]
                 task_summary = "\n".join(task_texts)
                 
                 self.draw_multiline_text(
@@ -90,12 +83,14 @@ class MonthlyReportPDFGenerator(BasePDFGenerator):
                     font_size=9,
                     line_height=12
                 )
+            else:
+                print(f"   {week}: 데이터 없음")
         
         # ========================================
-        # 익월 계획 (plans)
+        # 익월 계획
         # ========================================
-        if report.plans:
-            익월_계획 = "\n".join([f"• {plan}" for plan in report.plans[:5]])
+        if monthly.next_month_plan:
+            익월_계획 = monthly.next_month_plan
             self.draw_multiline_text(
                 x=130,  # TODO: 좌표 조정
                 y=self._to_pdf_y(720),

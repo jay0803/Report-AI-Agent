@@ -16,8 +16,8 @@ sys.path.insert(0, str(project_root))
 from dotenv import load_dotenv
 load_dotenv()
 
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import SessionLocal
 from ingestion.auto_ingest import ingest_single_report
 from ingestion.chroma_client import get_chroma_service

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.reporting.pdf_generator.base import BasePDFGenerator
 from app.reporting.pdf_generator.utils import format_korean_date, truncate_text
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 import re
 
 
@@ -81,9 +81,14 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         Returns:
             PDF 바이트 스트림
         """
+        if not report.daily:
+            raise ValueError("CanonicalReport must have daily data for daily report PDF generation")
+        
+        daily = report.daily
+        
         print(f"📄 일일보고서 PDF 생성 시작")
         print(f"   Owner: {report.owner}, Date: {report.period_start}")
-        print(f"   Tasks: {len(report.tasks)}개, Issues: {len(report.issues)}개")
+        print(f"   Detail Tasks: {len(daily.detail_tasks)}개, Pending: {len(daily.pending)}개")
         
         # Canvas 초기화
         self._init_canvas()
@@ -104,16 +109,10 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         # ========================================
         금일_진행_업무_list = []
         
-        # plans (예정 업무) 포함
-        if report.plans:
-            for idx, plan in enumerate(report.plans, 1):
-                plan_text = plan if isinstance(plan, str) else plan.get('title', str(plan))
-                금일_진행_업무_list.append(f"{idx}. {plan_text}")
-        
-        # summary 추가
-        summary = report.metadata.get('summary', '')
-        if summary:
-            금일_진행_업무_list.append(summary)
+        # summary_tasks 추가
+        if daily.summary_tasks:
+            for idx, task in enumerate(daily.summary_tasks, 1):
+                금일_진행_업무_list.append(f"{idx}. {task}")
         
         # Y 좌표 배열 (보정된 좌표)
         금일_진행_업무_y_positions = [165, 187, 209]
@@ -146,16 +145,16 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         ]
         
         # 최대 9개 업무 표시
-        tasks = report.tasks[:9] if len(report.tasks) > 9 else report.tasks
+        detail_tasks = daily.detail_tasks[:9] if len(daily.detail_tasks) > 9 else daily.detail_tasks
         
-        for idx, task in enumerate(tasks):
+        for idx, task in enumerate(detail_tasks):
             if idx >= len(time_slot_y_positions):
                 break
             
             y_pos = time_slot_y_positions[idx]
             
             # 업무내용 (좌측 정렬)
-            업무내용 = task.description or task.title
+            업무내용 = task.text
             업무내용 = clean_task_description(업무내용)  # 간결하게 정리
             업무내용 = truncate_text(업무내용, max_length=32)
             
@@ -183,8 +182,8 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         # 미종결 업무사항 (font 10pt)
         # x=150, y=835
         # ========================================
-        if report.issues:
-            미종결_업무 = "\n".join([f"• {issue}" for issue in report.issues])
+        if daily.pending:
+            미종결_업무 = "\n".join([f"• {issue}" for issue in daily.pending])
             self.draw_multiline_text(
                 x=195,
                 y=self._to_pdf_y(535),
@@ -197,14 +196,8 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         # 익일 업무계획 (font 10pt)
         # x=150, y=920
         # ========================================
-        익일_업무계획_raw = report.metadata.get('next_day_plans', '') or report.metadata.get('next_plan', '')
-        
-        if isinstance(익일_업무계획_raw, list):
-            익일_업무계획 = "\n".join([f"• {plan}" for plan in 익일_업무계획_raw]) if 익일_업무계획_raw else ""
-        else:
-            익일_업무계획 = str(익일_업무계획_raw) if 익일_업무계획_raw else ""
-        
-        if 익일_업무계획:
+        if daily.plans:
+            익일_업무계획 = "\n".join([f"• {plan}" for plan in daily.plans])
             self.draw_multiline_text(
                 x=195,
                 y=self._to_pdf_y(630),
@@ -217,12 +210,11 @@ class DailyReportPDFGenerator(BasePDFGenerator):
         # 특이사항 (font 10pt)
         # x=150, y=1005
         # ========================================
-        특이사항 = report.metadata.get('notes', '')
-        if 특이사항:
+        if daily.notes:
             self.draw_multiline_text(
                 x=195,
                 y=self._to_pdf_y(725),
-                text=특이사항,
+                text=daily.notes,
                 font_size=10,
                 line_height=14
             )
