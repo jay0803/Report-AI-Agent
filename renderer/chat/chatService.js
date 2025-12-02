@@ -15,8 +15,7 @@ let accessToken = null;
  */
 export function setAccessToken(token) {
   accessToken = token;
-  console.log('✅ 액세스 토큰 설정됨');
-}
+  }
 
 /**
  * 세션 초기화
@@ -45,11 +44,9 @@ async function initSession() {
     
     const result = await response.json();
     sessionId = result.session_id;
-    console.log('✅ 챗봇 세션 생성:', sessionId);
-    return sessionId;
+        return sessionId;
   } catch (error) {
-    console.error('❌ 세션 생성 오류:', error);
-    throw error;
+        throw error;
   }
 }
 
@@ -59,9 +56,7 @@ async function initSession() {
  * @returns {Promise<{type: string, data: any}>} 챗봇 응답 (type과 data 포함)
  */
 export async function callChatModule(userText) {
-  console.log('📨 사용자 메시지:', userText);
-  
-  // "오늘 뭐할지 추천" 등의 키워드가 있으면 TodayPlan API 호출
+    // "오늘 뭐할지 추천" 등의 키워드가 있으면 TodayPlan API 호출
   if (userText.includes('오늘') && (userText.includes('추천') || userText.includes('뭐할'))) {
     return await getTodayPlan();
   }
@@ -103,15 +98,12 @@ async function sendChatbotMessage(userText) {
     }
     
     const result = await response.json();
-    console.log('🤖 챗봇 응답:', result);
-    
-    return {
+        return {
       type: 'text',
       data: result.assistant_message
     };
   } catch (error) {
-    console.error('❌ 챗봇 API 오류:', error);
-    return {
+        return {
       type: 'error',
       data: '챗봇 응답을 가져오는 중 오류가 발생했습니다. 로그인이 필요할 수 있습니다.'
     };

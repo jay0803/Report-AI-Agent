@@ -8,6 +8,7 @@ Created: 2025-11-18
 """
 import os
 import json
+import asyncio
 from typing import Optional, Dict, Any
 import openai
 from pydantic import BaseModel
@@ -60,7 +61,9 @@ class LLMClient:
             생성된 텍스트
         """
         try:
-            response = self.client.chat.completions.create(
+            # 동기 메서드를 비동기로 실행
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -74,6 +77,8 @@ class LLMClient:
         
         except Exception as e:
             print(f"[ERROR] LLM completion error: {e}")
+            import traceback
+            traceback.print_exc()
             raise
     
     async def acomplete_json(
@@ -96,7 +101,9 @@ class LLMClient:
             파싱된 JSON 딕셔너리
         """
         try:
-            response = self.client.chat.completions.create(
+            # 동기 메서드를 비동기로 실행
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -115,10 +122,14 @@ class LLMClient:
         except json.JSONDecodeError as e:
             print(f"[ERROR] JSON parsing error: {e}")
             print(f"Raw response: {content}")
+            import traceback
+            traceback.print_exc()
             raise
         
         except Exception as e:
             print(f"[ERROR] LLM JSON completion error: {e}")
+            import traceback
+            traceback.print_exc()
             raise
     
     def complete_json(

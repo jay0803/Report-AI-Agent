@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import os
 
-from app.domain.monthly.chain import generate_monthly_report
-from app.domain.monthly.repository import MonthlyReportRepository
-from app.domain.monthly.schemas import MonthlyReportCreate, MonthlyReportResponse, MonthlyReportListResponse
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.monthly.chain import generate_monthly_report
+from app.domain.report.monthly.repository import MonthlyReportRepository
+from app.domain.report.monthly.schemas import MonthlyReportCreate, MonthlyReportResponse, MonthlyReportListResponse
+from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import get_db
 from app.reporting.pdf_generator.monthly_report_pdf import MonthlyReportPDFGenerator
 

@@ -5,7 +5,6 @@
 
 변환 지원:
 - ReportCanonical (daily/weekly/monthly) → UnifiedCanonical
-- KPICanonical → UnifiedCanonical
 - Raw PDF Text → UnifiedCanonical (템플릿용)
 
 Author: AI Assistant
@@ -15,8 +14,7 @@ import hashlib
 from typing import Dict, Any
 from datetime import date
 
-from app.domain.report.schemas import CanonicalReport, TaskItem, KPIItem
-from app.domain.kpi.schemas import CanonicalKPI
+from app.domain.report.core.schemas import CanonicalReport, TaskItem
 from app.domain.common.canonical_schema import (
     UnifiedCanonical,
     DocumentSections,
@@ -107,24 +105,10 @@ def report_to_unified(canonical_report: CanonicalReport) -> UnifiedCanonical:
         for task in canonical_report.tasks
     ]
     
-    # KPIs 변환
-    kpis = [
-        KPISection(
-            kpi_name=kpi.kpi_name,
-            value=kpi.value,
-            unit=kpi.unit,
-            category=kpi.category,
-            delta=None,  # Report KPI에는 delta 없음
-            description="",
-            note=kpi.note
-        )
-        for kpi in canonical_report.kpis
-    ]
-    
     # Sections 생성
     sections = DocumentSections(
         tasks=tasks,
-        kpis=kpis,
+        kpis=[],
         issues=canonical_report.issues.copy(),
         plans=canonical_report.plans.copy(),
         summary=_generate_report_summary(canonical_report)
@@ -159,9 +143,6 @@ def _generate_report_summary(canonical: CanonicalReport) -> str:
     if canonical.tasks:
         lines.append(f"총 {len(canonical.tasks)}건의 작업")
     
-    if canonical.kpis:
-        lines.append(f"KPI {len(canonical.kpis)}개 항목")
-    
     if canonical.issues:
         lines.append(f"이슈 {len(canonical.issues)}건")
     
@@ -193,15 +174,6 @@ def _generate_report_raw_text(canonical: CanonicalReport) -> str:
                 task_text += f" ({task.time_start}~{task.time_end})"
             parts.append(task_text)
     
-    # KPIs
-    if canonical.kpis:
-        parts.append("\n=== KPI ===")
-        for kpi in canonical.kpis:
-            kpi_text = f"- {kpi.kpi_name}: {kpi.value}"
-            if kpi.unit:
-                kpi_text += f" {kpi.unit}"
-            parts.append(kpi_text)
-    
     # Issues
     if canonical.issues:
         parts.append("\n=== 이슈 ===")
@@ -213,94 +185,6 @@ def _generate_report_raw_text(canonical: CanonicalReport) -> str:
         parts.append("\n=== 계획 ===")
         for plan in canonical.plans:
             parts.append(f"- {plan}")
-    
-    return "\n".join(parts)
-
-
-# ========================================
-# KPI Canonical → Unified Canonical
-# ========================================
-
-def kpi_to_unified(canonical_kpi: CanonicalKPI) -> UnifiedCanonical:
-    """
-    기존 KPI Canonical을 UnifiedCanonical로 변환
-    
-    Args:
-        canonical_kpi: 기존 KPI Canonical 객체
-        
-    Returns:
-        UnifiedCanonical 객체
-        
-    Example:
-        >>> kpi = CanonicalKPI(...)
-        >>> unified = kpi_to_unified(kpi)
-        >>> unified.doc_type  # "kpi"
-    """
-    # 문서 ID
-    doc_id = canonical_kpi.kpi_id
-    
-    # KPI 섹션 생성
-    kpi_section = KPISection(
-        kpi_name=canonical_kpi.kpi_name,
-        value=canonical_kpi.values,
-        unit=canonical_kpi.unit,
-        category=canonical_kpi.category,
-        delta=canonical_kpi.delta,
-        description=canonical_kpi.description,
-        note=""
-    )
-    
-    sections = DocumentSections(
-        kpis=[kpi_section],
-        summary=canonical_kpi.raw_text_summary
-    )
-    
-    # Raw text 생성
-    raw_text = _generate_kpi_raw_text(canonical_kpi)
-    
-    # 메타데이터
-    metadata = canonical_kpi.metadata.copy()
-    metadata["original_format"] = "kpi"
-    metadata["original_kpi_id"] = canonical_kpi.kpi_id
-    metadata["page_index"] = canonical_kpi.page_index
-    
-    # 표 데이터 추가
-    if canonical_kpi.table:
-        metadata["table"] = canonical_kpi.table
-    
-    return UnifiedCanonical(
-        doc_id=doc_id,
-        doc_type="kpi",
-        title=f"KPI: {canonical_kpi.kpi_name}",
-        single_date=None,
-        period_start=None,
-        period_end=None,
-        owner="",
-        raw_text=raw_text,
-        sections=sections,
-        metadata=metadata
-    )
-
-
-def _generate_kpi_raw_text(canonical: CanonicalKPI) -> str:
-    """KPI 전체 텍스트 생성 (검색용)"""
-    parts = [
-        f"KPI: {canonical.kpi_name}",
-        f"카테고리: {canonical.category}",
-        f"값: {canonical.values}",
-    ]
-    
-    if canonical.unit:
-        parts.append(f"단위: {canonical.unit}")
-    
-    if canonical.delta:
-        parts.append(f"증감: {canonical.delta}")
-    
-    if canonical.description:
-        parts.append(f"설명: {canonical.description}")
-    
-    if canonical.raw_text_summary:
-        parts.append(f"\n{canonical.raw_text_summary}")
     
     return "\n".join(parts)
 
@@ -373,19 +257,4 @@ def batch_convert_reports(
         UnifiedCanonical 리스트
     """
     return [report_to_unified(report) for report in canonical_reports]
-
-
-def batch_convert_kpis(
-    canonical_kpis: list[CanonicalKPI]
-) -> list[UnifiedCanonical]:
-    """
-    여러 KPI를 한 번에 변환
-    
-    Args:
-        canonical_kpis: CanonicalKPI 리스트
-        
-    Returns:
-        UnifiedCanonical 리스트
-    """
-    return [kpi_to_unified(kpi) for kpi in canonical_kpis]
 

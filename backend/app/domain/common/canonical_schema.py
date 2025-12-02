@@ -1,7 +1,7 @@
 """
 통합 Canonical 문서 스키마
 
-모든 문서 타입(일일/주간/월간/실적 보고서, KPI, 템플릿)을 
+모든 문서 타입(일일/주간/월간 보고서, 템플릿)을 
 단일 형식으로 표준화하여 RAG 검색 및 Agent 처리를 단순화
 
 Author: AI Assistant
@@ -44,8 +44,7 @@ class DocumentSections(BaseModel):
     
     각 문서 타입에 따라 일부 섹션만 채워짐:
     - 일일 보고서: tasks, issues, plans
-    - KPI 문서: kpis
-    - 월간 보고서: tasks, kpis, issues, plans
+    - 월간 보고서: tasks, issues, plans
     """
     tasks: List[TaskSection] = Field(default_factory=list, description="작업 목록")
     kpis: List[KPISection] = Field(default_factory=list, description="KPI 목록")
@@ -69,13 +68,12 @@ class UnifiedCanonical(BaseModel):
     
     사용 예:
         - 일일 보고서 → doc_type="daily", sections.tasks 채움
-        - KPI 문서 → doc_type="kpi", sections.kpis 채움
         - 템플릿 → doc_type="template", raw_text만 채움
     """
     
     # 필수 필드
     doc_id: str = Field(..., description="문서 고유 ID (UUID 또는 deterministic hash)")
-    doc_type: Literal["daily", "weekly", "monthly", "performance", "kpi", "template"] = Field(
+    doc_type: Literal["daily", "weekly", "monthly", "template"] = Field(
         ..., 
         description="문서 타입"
     )

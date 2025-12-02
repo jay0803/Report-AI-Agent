@@ -15,9 +15,9 @@ report_env_path = project_root / ".env.report"
 if report_env_path.exists():
     load_dotenv(report_env_path, override=False)
 
-from app.domain.report.canonical_models import CanonicalReport
-from app.domain.report.chunker import chunk_canonical_report
-from app.domain.report.embedding_pipeline import get_embedding_pipeline
+from app.domain.report.core.canonical_models import CanonicalReport
+from app.domain.report.core.chunker import chunk_canonical_report
+from app.domain.report.core.embedding_pipeline import get_embedding_pipeline
 
 
 BATCH_SIZE = 50
@@ -40,12 +40,9 @@ def ingest_single_report(
     try:
         print(f"\n📤 [자동 Ingestion] 시작: {report.owner} - {report.period_start}")
         
-        # 1. 청킹 (새 청킹 파이프라인 사용)
+        # 1. 청킹 (의미 단위 청킹)
         print("  ⏳ 청킹 중...")
-        if api_key is None:
-            api_key = os.getenv("OPENAI_API_KEY")
-        
-        chunks = chunk_canonical_report(report, api_key, use_llm_refine=True)
+        chunks = chunk_canonical_report(report)
         
         if not chunks:
             print("  ⚠️  생성된 청크가 없습니다.")
@@ -70,7 +67,7 @@ def ingest_single_report(
         
         return {
             "success": True,
-            "collection": "daily_reports_advanced",
+            "collection": "reports",
             "uploaded_chunks": result['chunks_processed'],
             "total_documents": result['total_documents']
         }
@@ -99,11 +96,8 @@ def ingest_single_report_silent(
         성공 여부 (True/False)
     """
     try:
-        # 청킹 (새 청킹 파이프라인 사용)
-        if api_key is None:
-            api_key = os.getenv("OPENAI_API_KEY")
-        
-        chunks = chunk_canonical_report(report, api_key, use_llm_refine=True)
+        # 청킹 (의미 단위 청킹)
+        chunks = chunk_canonical_report(report)
         
         if not chunks:
             return False

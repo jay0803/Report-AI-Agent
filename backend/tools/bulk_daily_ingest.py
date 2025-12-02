@@ -25,9 +25,9 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.infrastructure.database.session import SessionLocal
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.daily.schemas import DailyReportCreate
-from app.domain.report.schemas import CanonicalReport, TaskItem
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.daily.schemas import DailyReportCreate
+from app.domain.report.core.canonical_models import CanonicalReport, CanonicalDaily, DetailTask
 import uuid
 
 
@@ -93,57 +93,79 @@ def convert_to_canonical_report(raw_json: Dict[str, Any]) -> CanonicalReport:
     
     period_date = parse_date(작성일자)
     
-    # 2. 세부업무를 TaskItem으로 변환
-    tasks = []
-    세부업무 = raw_json.get("세부업무", [])
+    # 2. 헤더 정보
+    header = {
+        "작성일자": 작성일자,
+        "성명": 성명
+    }
     
-    for idx, task_data in enumerate(세부업무):
+    # 3. summary_tasks (금일_진행_업무)
+    summary_tasks = []
+    금일진행업무 = raw_json.get("금일_진행_업무", "")
+    if 금일진행업무:
+        if isinstance(금일진행업무, list):
+            summary_tasks = 금일진행업무
+        else:
+            summary_tasks = [금일진행업무] if 금일진행업무.strip() else []
+    
+    # 4. detail_tasks (세부업무)
+    detail_tasks = []
+    세부업무 = raw_json.get("세부업무", [])
+    for task_data in 세부업무:
+        업무내용 = task_data.get("업무내용", "")
+        if not 업무내용 or not 업무내용.strip():
+            continue
+        
         time_str = task_data.get("시간", "")
         time_start, time_end = parse_time_range(time_str)
         
-        task = TaskItem(
-            task_id=f"time_{idx + 1}",
-            title=task_data.get("업무내용", "").split()[0] if task_data.get("업무내용") else "업무",
-            description=task_data.get("업무내용", ""),
+        detail_task = DetailTask(
             time_start=time_start,
             time_end=time_end,
-            status="완료",  # completed
+            text=업무내용,
             note=task_data.get("비고", "")
         )
-        tasks.append(task)
+        detail_tasks.append(detail_task)
     
-    # 3. issues 추출
-    issues = []
+    # 5. pending (미종결_업무사항)
+    pending = []
     미종결 = raw_json.get("미종결_업무사항", "")
-    if 미종결 and 미종결.strip():
-        issues.append(미종결)
+    if 미종결:
+        if isinstance(미종결, list):
+            pending = 미종결
+        else:
+            pending = [미종결] if 미종결.strip() else []
     
-    # 4. metadata 생성
-    metadata = {}
-    
+    # 6. plans (익일_업무계획)
+    plans = []
     익일계획 = raw_json.get("익일_업무계획", "")
-    if 익일계획 and 익일계획.strip():
-        metadata["next_plan"] = 익일계획
+    if 익일계획:
+        if isinstance(익일계획, list):
+            plans = 익일계획
+        else:
+            plans = [익일계획] if 익일계획.strip() else []
     
-    특이사항 = raw_json.get("특이사항", "")
-    if 특이사항 and 특이사항.strip():
-        metadata["notes"] = 특이사항
+    # 7. notes (특이사항)
+    notes = raw_json.get("특이사항", "") or ""
     
-    금일진행업무 = raw_json.get("금일_진행_업무", "")
-    if 금일진행업무 and 금일진행업무.strip():
-        metadata["summary"] = 금일진행업무
+    # 8. CanonicalDaily 생성
+    canonical_daily = CanonicalDaily(
+        header=header,
+        summary_tasks=summary_tasks,
+        detail_tasks=detail_tasks,
+        pending=pending,
+        plans=plans,
+        notes=notes
+    )
     
-    # 5. CanonicalReport 생성
+    # 9. CanonicalReport 생성
     report = CanonicalReport(
         report_id=str(uuid.uuid4()),
         report_type="daily",
         owner=성명,
         period_start=period_date,
         period_end=period_date,
-        tasks=tasks,
-        issues=issues,
-        plans=[],  # 일일보고서에는 plans 없음
-        metadata=metadata
+        daily=canonical_daily
     )
     
     return report
@@ -185,25 +207,67 @@ def read_json_objects_from_file(file_path: Path) -> List[Dict[str, Any]]:
     return json_objects
 
 
-def find_all_txt_files(base_dir: Path) -> List[Path]:
+def find_all_txt_files(base_dir: Path, year: Optional[int] = None, month: Optional[int] = None) -> List[Path]:
     """
-    base_dir 하위의 모든 txt 파일 찾기
+    base_dir 하위의 txt 파일 찾기 (날짜 필터링 옵션)
     
     Args:
         base_dir: 기본 디렉토리
+        year: 필터링할 연도 (None이면 모든 연도)
+        month: 필터링할 월 (None이면 모든 월, 예: 11 = 11월)
         
     Returns:
         txt 파일 경로 리스트
     """
-    return sorted(base_dir.rglob("*.txt"))
+    all_files = list(base_dir.rglob("*.txt"))
+    
+    # 날짜 필터링이 없으면 모든 파일 반환
+    if year is None and month is None:
+        return sorted(all_files)
+    
+    # 날짜 필터링
+    filtered_files = []
+    for file_path in all_files:
+        filename = file_path.stem  # 확장자 제거
+        
+        try:
+            # YYYY-MM-DD 형식 파싱
+            parts = filename.split('-')
+            if len(parts) >= 3:
+                file_year = int(parts[0])
+                file_month = int(parts[1])
+                
+                # 필터링 조건 확인
+                if year is not None and file_year != year:
+                    continue
+                if month is not None and file_month != month:
+                    continue
+                
+                filtered_files.append(file_path)
+        except (ValueError, IndexError):
+            # 날짜 파싱 실패한 파일은 제외
+            continue
+    
+    return sorted(filtered_files)
 
 
-def bulk_ingest_daily_reports():
+def bulk_ingest_daily_reports(year: Optional[int] = None, month: Optional[int] = None):
     """
-    메인 함수: 모든 일일보고서를 DB에 저장
+    메인 함수: 일일보고서를 DB에 저장
+    
+    Args:
+        year: 필터링할 연도 (None이면 모든 연도)
+        month: 필터링할 월 (None이면 모든 월, 예: 11 = 11월)
     """
     print("=" * 70)
     print("📊 일일보고서 Bulk Ingestion 시작")
+    if year or month:
+        filter_msg = []
+        if year:
+            filter_msg.append(f"{year}년")
+        if month:
+            filter_msg.append(f"{month}월")
+        print(f"필터: {' '.join(filter_msg)}")
     print("=" * 70)
     
     # 1. 기본 경로 설정
@@ -215,9 +279,11 @@ def bulk_ingest_daily_reports():
     
     print(f"\n📁 대상 디렉토리: {base_dir}")
     
-    # 2. 모든 txt 파일 찾기
-    txt_files = find_all_txt_files(base_dir)
+    # 2. txt 파일 찾기 (날짜 필터링 적용)
+    txt_files = find_all_txt_files(base_dir, year=year, month=month)
     print(f"📄 발견된 txt 파일: {len(txt_files)}개")
+    if year or month:
+        print(f"   (필터: {year or '모든 연도'}년 {month or '모든 월'}월)")
     
     if not txt_files:
         print("⚠️  txt 파일이 없습니다.")
@@ -286,7 +352,7 @@ def bulk_ingest_daily_reports():
         
         # 6. DB 확인
         print(f"\n🔍 DB 확인:")
-        from app.domain.daily.models import DailyReport
+        from app.domain.report.daily.models import DailyReport
         kim_reports = db.query(DailyReport).filter(
             DailyReport.owner == "김보험"
         ).count()
@@ -303,5 +369,6 @@ def bulk_ingest_daily_reports():
 
 
 if __name__ == "__main__":
+    # 모든 목업 데이터를 PostgreSQL에 저장
     bulk_ingest_daily_reports()
 

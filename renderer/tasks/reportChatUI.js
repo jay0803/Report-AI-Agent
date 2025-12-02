@@ -1,6 +1,6 @@
 /**
- * 보고서 & 추천 업무 통합 UI
- * 일일/주간/월간/실적 보고서 + 추천 업무
+ * 보고서 & 업무 플래닝 통합 UI
+ * 일일/주간/월간/실적 보고서 + 업무 플래닝
  * 
  * 단축키: Ctrl+Shift+R
  */
@@ -20,7 +20,7 @@ let chatMode = 'normal'; // 'normal' 또는 'daily_fsm'
 let dailySessionId = null;
 let dailyOwner = '김보험';
 
-// 추천 업무 선택 상태
+// 업무 플래닝 선택 상태
 let selectedTasks = new Set();
 let currentRecommendation = null;
 let hasMainTasksSaved = false; // 🔥 금일 업무 저장 여부 추적 (첫 저장 이후는 append)
@@ -40,24 +40,16 @@ let customDates = {
  */
 export function initReportPanel() {
   if (isReportPanelInitialized) {
-    console.log('⚠️  보고서 패널 이미 초기화됨 - 스킵');
-    return;
+        return;
   }
   
-  console.log('📝 보고서 패널 초기화 중...');
-  
-  reportPanel = document.getElementById('report-panel');
+    reportPanel = document.getElementById('report-panel');
   messagesContainer = document.getElementById('report-messages');
   reportInput = document.getElementById('report-input');
   sendBtn = document.getElementById('report-send-btn');
   
   if (!reportPanel || !messagesContainer || !reportInput || !sendBtn) {
-    console.error('❌ 보고서 패널 요소를 찾을 수 없습니다.');
-    console.error('reportPanel:', reportPanel);
-    console.error('messagesContainer:', messagesContainer);
-    console.error('reportInput:', reportInput);
-    console.error('sendBtn:', sendBtn);
-    return;
+                        return;
   }
   
   // 🔥 강제로 스타일 적용 (최우선)
@@ -74,18 +66,7 @@ export function initReportPanel() {
     inputArea.style.setProperty('pointer-events', 'auto', 'important');
   }
   
-  console.log('🎨 reportPanel 스타일:', {
-    pointerEvents: window.getComputedStyle(reportPanel).pointerEvents,
-    zIndex: window.getComputedStyle(reportPanel).zIndex,
-    display: window.getComputedStyle(reportPanel).display
-  });
-  
-  console.log('🎨 reportInput 스타일:', {
-    pointerEvents: window.getComputedStyle(reportInput).pointerEvents,
-    cursor: window.getComputedStyle(reportInput).cursor
-  });
-  
-  // 날짜 설정 패널 요소 가져오기
+      // 날짜 설정 패널 요소 가져오기
   dateSettingsPanel = document.getElementById('date-settings-panel');
   const applyDateBtn = document.getElementById('apply-date-btn');
   const closeDateBtn = document.getElementById('close-date-btn');
@@ -100,20 +81,17 @@ export function initReportPanel() {
   }
   
   // 초기 메시지 추가
-  addMessage('assistant', '📝 보고서 & 업무 관리를 도와드립니다!\n\n• "오늘 추천 업무" - 업무 추천\n• "일일 보고서" - 일일 보고서 작성\n• "주간 보고서" - 주간 보고서 생성\n• "월간 보고서" - 월간 보고서 생성\n• "실적 보고서" - 연간 실적 보고서 생성\n• "날짜 설정" - 과거 기간 보고서 작성\n\n💬 **일일보고서 데이터 검색 챗봇**\n자연어로 질문하면 1년치 일일보고서 데이터를 검색해 답변합니다!\n예: "나 최근에 연금 상담 언제 했었지?"');
+  addMessage('assistant', '📝 보고서 & 업무 관리를 도와드립니다!\n\n• "오늘 업무 플래닝" - 업무 플래닝\n• "일일 보고서" - 일일 보고서 작성\n• "주간 보고서" - 주간 보고서 생성\n• "월간 보고서" - 월간 보고서 생성\n• "실적 보고서" - 연간 실적 보고서 생성\n• "날짜 설정" - 과거 기간 보고서 작성\n\n💬 **일일보고서 데이터 검색 챗봇**\n자연어로 질문하면 1년치 일일보고서 데이터를 검색해 답변합니다!\n예: "나 최근에 연금 상담 언제 했었지?"');
   
   // 이벤트 리스너 등록
   sendBtn.addEventListener('click', () => {
-    console.log('🖱️ 전송 버튼 클릭됨!');
-    handleSendMessage();
+        handleSendMessage();
   });
   reportInput.addEventListener('keydown', handleReportInputKeydown);
   reportInput.addEventListener('click', () => {
-    console.log('🖱️ 입력창 클릭됨!');
-  });
+      });
   reportInput.addEventListener('focus', () => {
-    console.log('✨ 입력창 포커스됨!');
-  });
+      });
   window.addEventListener('keydown', handleReportGlobalKeydown);
   
   // 🔥 드래그 기능 추가
@@ -121,8 +99,7 @@ export function initReportPanel() {
   
   isReportPanelInitialized = true;
   
-  console.log('✅ 보고서 패널 초기화 완료');
-}
+  }
 
 // 전역으로 export
 window.initReportPanel = initReportPanel;
@@ -152,8 +129,7 @@ function handleReportGlobalKeydown(e) {
     if (e.target.ownerDocument === document) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('🔑 Ctrl+Shift+R 감지 → 보고서 패널 토글');
-      togglePanel();
+            togglePanel();
     }
   }
 }
@@ -166,8 +142,7 @@ async function handleSendMessage() {
   if (!text) return;
   
   if (sendBtn.disabled) {
-    console.log('⚠️  이미 전송 중...');
-    return;
+        return;
   }
   
   addMessage('user', text);
@@ -189,8 +164,7 @@ async function handleSendMessage() {
       await handleReportIntent(text);
     }
   } catch (error) {
-    console.error('❌ 보고서 오류:', error);
-    addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
+        addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
   } finally {
     sendBtn.disabled = false;
     sendBtn.textContent = '전송';
@@ -209,7 +183,7 @@ async function handleReportIntent(text) {
     return;
   }
   
-  // 추천 업무
+      // 업무 플래닝
   if (isTaskRecommendationIntent(lower)) {
     await getTodayPlan();
     return;
@@ -245,7 +219,7 @@ async function handleReportIntent(text) {
 }
 
 /**
- * 추천 업무 Intent 감지
+ * 업무 플래닝 Intent 감지
  */
 function isTaskRecommendationIntent(text) {
   const keywords = ['추천', '뭐할', '뭐해', '업무', '할일', 'todo', 'task'];
@@ -267,9 +241,7 @@ function isDailyReportTrigger(text) {
  * 일일 보고서 FSM 시작
  */
 async function startDailyReport() {
-  console.log('📝 일일 보고서 FSM 시작...');
-  
-  try {
+    try {
     // 🔥 사용자 지정 날짜 또는 오늘 날짜
     const targetDate = customDates.daily || new Date().toISOString().split('T')[0];
     
@@ -286,13 +258,21 @@ async function startDailyReport() {
     });
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: '알 수 없는 오류가 발생했습니다.' }));
+      
+      // main_tasks가 없는 경우 (400 에러)
+      if (response.status === 400 && errorData.detail && errorData.detail.includes('금일 업무 계획')) {
+        addMessage('assistant', '⚠️ 금일 업무 계획이 설정되지 않았습니다.\n\n먼저 "오늘 업무 플래닝" 기능을 사용하여 오늘의 업무를 설정해주세요. 📋');
+        // 업무 플래닝 기능으로 자동 이동
+        await getTodayPlan();
+        return;
+      }
+      
       throw new Error(`API 호출 실패: ${response.status}`);
     }
     
     const result = await response.json();
-    console.log('✅ FSM 시작 완료:', result);
-    
-    // FSM 모드로 전환
+        // FSM 모드로 전환
     chatMode = 'daily_fsm';
     dailySessionId = result.session_id;
     
@@ -305,8 +285,7 @@ async function startDailyReport() {
     addMessage('assistant', result.question);
     
   } catch (error) {
-    console.error('❌ FSM 시작 오류:', error);
-    addMessage('assistant', '일일 보고서를 시작하는 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '일일 보고서를 시작하는 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -314,9 +293,7 @@ async function startDailyReport() {
  * 일일 보고서 FSM 답변 처리
  */
 async function handleDailyAnswer(answer) {
-  console.log('📝 FSM 답변 전송:', answer);
-  
-  try {
+    try {
     const response = await fetch(`${API_BASE}/daily/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -331,9 +308,7 @@ async function handleDailyAnswer(answer) {
     }
     
     const result = await response.json();
-    console.log('✅ FSM 답변 처리 완료:', result);
-    
-    if (result.status === 'finished') {
+        if (result.status === 'finished') {
       // 완료 처리
       addMessage('assistant', result.message || '일일 보고서 작성이 완료되었습니다! 🙌');
       
@@ -360,8 +335,7 @@ async function handleDailyAnswer(answer) {
     }
     
   } catch (error) {
-    console.error('❌ FSM 답변 오류:', error);
-    addMessage('assistant', '답변 처리 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '답변 처리 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -444,8 +418,7 @@ async function generateWeeklyReport() {
     
     addMessage('assistant', `✅ 주간 보고서가 생성되었습니다!\n\n기간: ${startDate} ~ ${endDate}\n완료 업무: ${totalTasks}개\n\n📄 PDF 파일이 output/report_result/weekly/ 에 저장되었습니다!`);
   } catch (error) {
-    console.error('❌ 주간 보고서 생성 실패:', error);
-    addMessage('assistant', '주간 보고서 생성 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '주간 보고서 생성 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -481,8 +454,7 @@ async function generateMonthlyReport() {
     
     addMessage('assistant', `✅ 월간 보고서가 생성되었습니다!\n\n기간: ${year}년 ${month}월\n완료 업무: ${totalTasks}개\n\n📄 PDF 파일이 output/report_result/monthly/ 에 저장되었습니다!`);
   } catch (error) {
-    console.error('❌ 월간 보고서 생성 실패:', error);
-    addMessage('assistant', '월간 보고서 생성 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '월간 보고서 생성 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -515,8 +487,7 @@ async function generateYearlyReport() {
     
     addMessage('assistant', `✅ ${year}년 실적 보고서가 생성되었습니다!\n\n총 업무: ${totalTasks}개\n\n📄 PDF 파일이 output/report_result/performance/ 에 저장되었습니다!`);
   } catch (error) {
-    console.error('❌ 실적 보고서 생성 실패:', error);
-    addMessage('assistant', '실적 보고서 생성 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '실적 보고서 생성 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -537,8 +508,7 @@ function addMessage(role, text) {
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log(`📝 [${role}]: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
-}
+  }
 
 /**
  * 패널 토글
@@ -560,42 +530,25 @@ function togglePanel() {
       initPanelDrag();
     }
     
-    console.log('👁️ 보고서 패널 표시');
-    
-    console.log('🔍 패널 열린 후 스타일:', {
-      display: window.getComputedStyle(reportPanel).display,
-      pointerEvents: window.getComputedStyle(reportPanel).pointerEvents,
-      zIndex: window.getComputedStyle(reportPanel).zIndex,
-      position: window.getComputedStyle(reportPanel).position
-    });
-    
-    console.log('🔍 입력창 스타일:', {
-      pointerEvents: window.getComputedStyle(reportInput).pointerEvents,
-      cursor: window.getComputedStyle(reportInput).cursor,
-      display: window.getComputedStyle(reportInput).display
-    });
-    
-    // 입력창에 포커스
+                // 입력창에 포커스
     setTimeout(() => {
       if (reportInput) {
         reportInput.focus();
-        console.log('⌨️ 입력창 포커스 시도 완료');
-      }
+              }
     }, 100);
   } else {
     reportPanel.style.display = 'none';
     reportPanel.classList.remove('visible');
     document.body.classList.remove('report-panel-active'); // 🔥 body에서 클래스 제거
-    console.log('🙈 보고서 패널 숨김');
-  }
+      }
 }
 
 /**
- * 오늘의 추천 업무 가져오기
+ * 오늘의 업무 플래닝 가져오기
  */
 async function getTodayPlan() {
   try {
-    addMessage('assistant', '📋 오늘의 추천 업무를 가져오는 중입니다...');
+    addMessage('assistant', '📋 오늘의 업무 플래닝을 가져오는 중입니다...');
     
     // 🔥 사용자 지정 날짜 또는 오늘 날짜
     const targetDate = customDates.daily || new Date().toISOString().split('T')[0];
@@ -614,38 +567,30 @@ async function getTodayPlan() {
     }
     
     const data = await response.json();
-    console.log('📋 API 응답:', data);
-    console.log('📋 추천 업무 개수:', data.recommended_tasks?.length || 0);
-    
-    // 추천 업무 UI 표시
+            // 업무 플래닝 UI 표시
     const tasks = data.recommended_tasks || data.tasks || [];
-    console.log('📋 처리할 업무:', tasks);
-    
-    if (tasks.length === 0) {
-      addMessage('assistant', '추천할 업무가 없습니다. "직접 작성하기"를 이용해주세요! 😊');
+        if (tasks.length === 0) {
+      addMessage('assistant', '플래닝할 업무가 없습니다. "직접 작성하기"를 이용해주세요! 😊');
     }
     
     addTaskRecommendations({
       tasks: tasks,
-      summary: data.summary || '오늘의 추천 업무입니다!',
+      summary: data.summary || '오늘의 업무 플래닝입니다!',
       owner: data.owner || dailyOwner,
       target_date: data.target_date || targetDate
     });
   } catch (error) {
-    console.error('❌ 추천 업무 가져오기 실패:', error);
-    addMessage('assistant', '추천 업무를 가져오는데 실패했습니다. 😢');
+        addMessage('assistant', '업무 플래닝을 가져오는데 실패했습니다. 😢');
   }
 }
 
 /**
- * 추천 업무 카드 추가
+ * 업무 플래닝 카드 추가
  */
 function addTaskRecommendations(data) {
   const { tasks, summary, owner, target_date } = data;
   
-  console.log('🎨 UI 생성 시작:', { tasks: tasks?.length, owner, target_date });
-  
-  currentRecommendation = { owner, target_date, tasks };
+    currentRecommendation = { owner, target_date, tasks };
   selectedTasks.clear();
   
   // 요약 메시지
@@ -682,8 +627,7 @@ function addTaskRecommendations(data) {
   customTaskButton.textContent = '✏️ 직접 작성하기';
   // CSS에서 pointer-events와 cursor 상속받음
   customTaskButton.addEventListener('click', () => {
-    console.log('🖱️ 직접 작성하기 클릭!');
-    showCustomTaskInput(owner, target_date);
+        showCustomTaskInput(owner, target_date);
   });
   container.appendChild(customTaskButton);
   
@@ -701,8 +645,7 @@ function addTaskRecommendations(data) {
   messagesContainer.appendChild(container);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log('✅ UI 생성 완료');
-}
+  }
 
 /**
  * 업무 카드 생성
@@ -806,8 +749,7 @@ async function handleSaveSelectedTasks(event) {
     saveButton.closest('.task-recommendations-container').style.opacity = '0.5';
     saveButton.textContent = '저장 완료';
   } catch (error) {
-    console.error('❌ 저장 오류:', error);
-    addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
+        addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
     saveButton.disabled = false;
     saveButton.textContent = '선택 완료';
   }
@@ -924,8 +866,7 @@ function showCustomTaskInput(owner, targetDate) {
       // 🔥 저장 후 확인 UI 표시
       await showSavedTasksConfirmation(owner, targetDate);
     } catch (error) {
-      console.error('❌ 업무 저장 오류:', error);
-      addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
+            addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
       saveBtn.disabled = false;
       saveBtn.textContent = '저장';
     }
@@ -1068,8 +1009,7 @@ async function showSavedTasksConfirmation(owner, targetDate) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
   } catch (error) {
-    console.error('❌ 업무 확인 오류:', error);
-  }
+      }
 }
 
 /**
@@ -1210,8 +1150,7 @@ async function showEditMainTasksUI(owner, targetDate, currentTasks) {
         await showSavedTasksConfirmation(owner, targetDate);
         
       } catch (error) {
-        console.error('❌ 업무 수정 실패:', error);
-        addMessage('assistant', `❌ 업무 수정 실패: ${error.message}`);
+                addMessage('assistant', `❌ 업무 수정 실패: ${error.message}`);
       }
     });
     
@@ -1242,8 +1181,7 @@ async function showEditMainTasksUI(owner, targetDate, currentTasks) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
   } catch (error) {
-    console.error('❌ 업무 수정 UI 오류:', error);
-    addMessage('assistant', '❌ 업무 수정 UI 표시 중 오류가 발생했습니다.');
+        addMessage('assistant', '❌ 업무 수정 UI 표시 중 오류가 발생했습니다.');
   }
 }
 
@@ -1311,12 +1249,16 @@ async function handleRAGChat(query) {
     // 로딩 메시지
     const loadingId = addMessageWithId('assistant', '🔍 일일보고서 데이터를 검색 중입니다...');
     
+    // 🔥 사용자가 설정한 날짜를 기준 날짜로 전달
+    const referenceDate = customDates.daily || new Date().toISOString().split('T')[0];
+    
     const response = await fetch(`${API_BASE}/report-chat/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         owner: dailyOwner,
-        query: query
+        query: query,
+        reference_date: referenceDate  // 🔥 기준 날짜 전달
       })
     });
     
@@ -1341,8 +1283,7 @@ async function handleRAGChat(query) {
     }
     
   } catch (error) {
-    console.error('❌ RAG 챗봇 오류:', error);
-    addMessage('assistant', '죄송합니다. 일일보고서 검색 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '죄송합니다. 일일보고서 검색 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -1496,8 +1437,7 @@ function initPanelDrag() {
     panelHeader.style.cursor = 'move';
   }
   
-  console.log('✅ 패널 드래그 기능 초기화 완료');
-}
+  }
 
 /**
  * 유틸: 이번 주 월요일 날짜

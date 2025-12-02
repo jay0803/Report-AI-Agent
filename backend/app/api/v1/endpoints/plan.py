@@ -1,7 +1,7 @@
 """
 Plan API 엔드포인트
 
-일정 계획 및 추천 API
+일정 계획 및 플래닝 API
 
 Author: AI Assistant
 Created: 2025-11-18
@@ -10,10 +10,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import date
 from sqlalchemy.orm import Session
 
-from app.domain.planner.schemas import TodayPlanRequest, TodayPlanResponse
-from app.domain.planner.today_plan_chain import TodayPlanGenerator
-from app.domain.planner.tools import YesterdayReportTool
-from app.domain.search.retriever import UnifiedRetriever
+from app.domain.report.planner.schemas import TodayPlanRequest, TodayPlanResponse
+from app.domain.report.planner.today_plan_chain import TodayPlanGenerator
+from app.domain.report.planner.tools import YesterdayReportTool
+from app.domain.report.search.retriever import UnifiedRetriever
 from app.infrastructure.database.session import get_db
 from app.llm.client import get_llm
 from app.core.config import settings
@@ -30,20 +30,23 @@ def get_today_plan_generator(db: Session = Depends(get_db)) -> TodayPlanGenerato
     # VectorDB에서 유사 업무 패턴 검색 (선택적)
     vector_retriever = None
     try:
-        # daily_reports_advanced 컬렉션 사용 (로컬 ChromaDB)
-        from app.infrastructure.vector_store_advanced import get_vector_store
-        vector_store = get_vector_store()
+        # reports 컬렉션 사용 (로컬 ChromaDB)
+        from app.infrastructure.vector_store_report import get_report_vector_store
+        vector_store = get_report_vector_store()
         collection = vector_store.get_collection()
         
+        import os
+        embedding_model_type = os.getenv("REPORT_EMBEDDING_MODEL_TYPE", "hf")
         vector_retriever = UnifiedRetriever(
             collection=collection,
-            openai_api_key=settings.OPENAI_API_KEY
+            openai_api_key=settings.OPENAI_API_KEY,
+            embedding_model_type=embedding_model_type
         )
         
         doc_count = collection.count()
-        print(f"✅ VectorDB 초기화 완료: daily_reports_advanced 컬렉션 ({doc_count}개 문서)")
+        print(f"✅ VectorDB 초기화 완료: reports 컬렉션 ({doc_count}개 문서)")
     except Exception as e:
-        print(f"[WARNING] VectorDB 초기화 실패 (추천 기능 제한): {e}")
+        print(f"[WARNING] VectorDB 초기화 실패 (플래닝 기능 제한): {e}")
         import traceback
         traceback.print_exc()
         # VectorDB가 없어도 작동하도록 None으로 설정
@@ -60,10 +63,10 @@ async def generate_today_plan(
     generator: TodayPlanGenerator = Depends(get_today_plan_generator)
 ) -> TodayPlanResponse:
     """
-    오늘의 추천 일정 생성
+    오늘의 일정 플래닝
     
     전날의 미종결 업무와 익일 계획을 기반으로
-    오늘 하루 추천 일정을 AI가 자동 생성합니다.
+    오늘 하루 일정을 AI가 자동 플래닝합니다.
     
     Args:
         request: 일정 생성 요청
@@ -77,6 +80,8 @@ async def generate_today_plan(
     
     except Exception as e:
         print(f"[ERROR] Today plan generation failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"일정 생성 실패: {str(e)}"

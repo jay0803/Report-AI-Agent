@@ -9,13 +9,13 @@ from datetime import date
 from typing import Dict, Any
 
 from app.infrastructure.database.session import get_db
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.daily.schemas import (
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.daily.schemas import (
     DailyReportCreate,
     DailyReportResponse,
     DailyReportListResponse
 )
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 
 
 router = APIRouter(prefix="/daily-report", tags=["daily-report"])

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import date
 
-from app.domain.report.rag_service import ReportRAGService
+from app.domain.report.core.rag_service import ReportRAGService
 
 router = APIRouter(prefix="/report-chat", tags=["report-chat"])
 
@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     query: str
     date_start: Optional[str] = None  # YYYY-MM-DD 형식
     date_end: Optional[str] = None  # YYYY-MM-DD 형식
+    reference_date: Optional[str] = None  # YYYY-MM-DD 형식, "이번 주" 같은 상대적 날짜 계산 기준
 
 
 class SourceInfo(BaseModel):
@@ -77,12 +78,18 @@ async def chat_with_reports(request: ChatRequest):
             if request.date_end:
                 date_range["end"] = date.fromisoformat(request.date_end)
         
+        # 기준 날짜 파싱 (상대적 날짜 계산용)
+        reference_date = None
+        if request.reference_date:
+            reference_date = date.fromisoformat(request.reference_date)
+        
         # RAG 서비스 호출
         rag_service = get_rag_service()
         result = await rag_service.chat(
             owner=request.owner,
             query=request.query,
-            date_range=date_range
+            date_range=date_range,
+            reference_date=reference_date
         )
         
         # SourceInfo 변환

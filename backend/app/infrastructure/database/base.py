@@ -7,6 +7,6 @@ from app.infrastructure.database.session import Base
 
 # 여기에 모든 모델을 import
 from app.domain.user.models import User
-from app.domain.daily.models import DailyReport
+from app.domain.report.daily.models import DailyReport
 
 __all__ = ["Base", "User", "DailyReport"]

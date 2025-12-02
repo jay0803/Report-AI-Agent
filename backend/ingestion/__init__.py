@@ -6,9 +6,7 @@ Ingestion 모듈
 from ingestion.embed import embed_text, embed_texts, get_embedding_service
 from ingestion.chroma_client import (
     get_chroma_service,
-    get_kpi_collection
 )
-from ingestion.ingest_kpi import ingest_kpi, delete_kpi_by_ids, query_kpi
 
 __all__ = [
     # Embedding
@@ -18,11 +16,5 @@ __all__ = [
     
     # Chroma Client
     "get_chroma_service",
-    "get_kpi_collection",
-    
-    # KPI Ingestion
-    "ingest_kpi",
-    "delete_kpi_by_ids",
-    "query_kpi",
 ]
 

@@ -8,17 +8,12 @@ import { getTodayPlan, saveSelectedTasks } from '../tasks/taskService.js';
 
 // 세션 스토리지에서 토큰 가져와서 챗봇 서비스 초기화
 const accessToken = sessionStorage.getItem('access_token');
-console.log('🔍 세션 스토리지 확인:', {
-  accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'null',
-  sessionStorageKeys: Object.keys(sessionStorage)
 });
 
 if (accessToken) {
   initChatbotService(accessToken);
-  console.log('✅ 세션 스토리지에서 액세스 토큰 로드 완료');
-} else {
-  console.warn('⚠️ 액세스 토큰이 없습니다. 일부 기능(메일 전송 등)은 로그인이 필요합니다.');
-}
+  } else {
+  }
 
 let messages = [];
 let isPanelVisible = true;
@@ -33,20 +28,16 @@ let isChatPanelInitialized = false;
  */
 export function initChatPanel() {
   if (isChatPanelInitialized) {
-    console.log('⚠️  채팅 패널 이미 초기화됨 - 스킵');
-    return;
+        return;
   }
   
-  console.log('💬 채팅 패널 초기화 중...');
-  
-  chatPanel = document.getElementById('chat-panel');
+    chatPanel = document.getElementById('chat-panel');
   messagesContainer = document.getElementById('messages');
   chatInput = document.getElementById('chat-input');
   sendBtn = document.getElementById('send-btn');
   
   if (!chatPanel || !messagesContainer || !chatInput || !sendBtn) {
-    console.error('❌ 채팅 패널 요소를 찾을 수 없습니다.');
-    return;
+        return;
   }
   
   // 초기 메시지 추가
@@ -59,8 +50,7 @@ export function initChatPanel() {
   
   isChatPanelInitialized = true;
   
-  console.log('✅ 채팅 패널 초기화 완료');
-}
+  }
 
 // 전역으로 export
 window.initChatPanel = initChatPanel;
@@ -98,8 +88,7 @@ async function handleSendMessage() {
   if (!text) return;
   
   if (sendBtn.disabled) {
-    console.log('⚠️  이미 전송 중...');
-    return;
+        return;
   }
   
   addMessage('user', text);
@@ -112,7 +101,7 @@ async function handleSendMessage() {
   sendBtn.textContent = '...';
   
   try {
-    // "오늘 뭐할지 추천" 등의 키워드가 있으면 업무 추천 API 호출
+    // "오늘 뭐할지 추천" 등의 키워드가 있으면 업무 플래닝 API 호출
     if (text.includes('오늘') && (text.includes('추천') || text.includes('뭐할'))) {
       const response = await getTodayPlan();
       
@@ -127,8 +116,7 @@ async function handleSendMessage() {
       addMessage('assistant', assistantMessage);
     }
   } catch (error) {
-    console.error('❌ 채팅 오류:', error);
-    addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
+        addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
   } finally {
     sendBtn.disabled = false;
     sendBtn.textContent = '전송';
@@ -174,8 +162,7 @@ function addMessage(role, text) {
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log(`💬 [${role}]: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
-}
+  }
 
 /**
  * 패널 토글
@@ -185,9 +172,7 @@ function togglePanel() {
   
   if (isPanelVisible) {
     chatPanel.style.display = 'flex';
-    console.log('👁️ 채팅 패널 표시');
-  } else {
+      } else {
     chatPanel.style.display = 'none';
-    console.log('🙈 채팅 패널 숨김');
-  }
+      }
 }

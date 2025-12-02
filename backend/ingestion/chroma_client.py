@@ -11,9 +11,6 @@ from pathlib import Path
 # 로컬 ChromaDB 경로
 CHROMA_PERSIST_DIR = Path(__file__).resolve().parent.parent / "Data" / "chroma"
 
-# 컬렉션 이름
-COLLECTION_KPI = "kpi"
-
 
 class ChromaLocalService:
     """로컬 ChromaDB 서비스"""
@@ -74,15 +71,6 @@ class ChromaLocalService:
             print(f"✅ 컬렉션 '{name}' 준비 완료 (재생성)")
             return collection
     
-    def get_kpi_collection(self) -> Collection:
-        """
-        KPI 컬렉션 가져오기
-        
-        Returns:
-            KPI Collection
-        """
-        return self.get_or_create_collection(name=COLLECTION_KPI)
-    
     def get_collection_info(self, collection: Collection) -> dict:
         """
         컬렉션 정보 조회
@@ -130,10 +118,4 @@ def get_chroma_service() -> ChromaLocalService:
     if _chroma_service is None:
         _chroma_service = ChromaLocalService()
     return _chroma_service
-
-
-def get_kpi_collection() -> Collection:
-    """KPI 컬렉션 가져오기 (헬퍼 함수)"""
-    service = get_chroma_service()
-    return service.get_kpi_collection()
 

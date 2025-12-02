@@ -8,10 +8,10 @@ from datetime import date
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.weekly.repository import WeeklyReportRepository
-from app.domain.monthly.repository import MonthlyReportRepository
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.weekly.repository import WeeklyReportRepository
+from app.domain.report.monthly.repository import MonthlyReportRepository
+from app.domain.report.core.schemas import CanonicalReport
 
 from app.reporting.pdf_generator.daily_report_pdf import DailyReportPDFGenerator
 from app.reporting.pdf_generator.weekly_report_pdf import WeeklyReportPDFGenerator

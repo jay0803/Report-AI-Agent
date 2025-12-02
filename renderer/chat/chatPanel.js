@@ -11,7 +11,7 @@ let messages = [];
 // 패널 표시 상태
 let isPanelVisible = true;
 
-// 추천 업무 선택 상태
+// 업무 플래닝 선택 상태
 let selectedTasks = new Set();
 let currentRecommendation = null; // { owner, target_date, tasks }
 
@@ -25,17 +25,14 @@ let sendBtn = null;
  * 채팅 패널 초기화
  */
 export function initChatPanel() {
-  console.log('💬 채팅 패널 초기화 중...');
-  
-  // DOM 요소 가져오기
+    // DOM 요소 가져오기
   chatPanel = document.getElementById('chat-panel');
   messagesContainer = document.getElementById('messages');
   chatInput = document.getElementById('chat-input');
   sendBtn = document.getElementById('send-btn');
   
   if (!chatPanel || !messagesContainer || !chatInput || !sendBtn) {
-    console.error('❌ 채팅 패널 요소를 찾을 수 없습니다.');
-    return;
+        return;
   }
   
   // 초기 메시지 추가
@@ -44,8 +41,7 @@ export function initChatPanel() {
   // 이벤트 리스너 등록
   setupEventListeners();
   
-  console.log('✅ 채팅 패널 초기화 완료');
-}
+  }
 
 /**
  * 이벤트 리스너 설정
@@ -96,7 +92,7 @@ async function handleSendMessage() {
     
     // 응답 타입에 따라 처리
     if (response.type === 'task_recommendations') {
-      // 추천 업무 카드 UI 표시
+      // 업무 플래닝 카드 UI 표시
       addTaskRecommendations(response.data);
     } else if (response.type === 'error') {
       addMessage('assistant', response.data);
@@ -105,8 +101,7 @@ async function handleSendMessage() {
       addMessage('assistant', response.data);
     }
   } catch (error) {
-    console.error('❌ 채팅 오류:', error);
-    addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
+        addMessage('assistant', '죄송합니다. 오류가 발생했습니다. 😢');
   } finally {
     // 버튼 다시 활성화
     sendBtn.disabled = false;
@@ -137,11 +132,10 @@ function addMessage(role, text) {
   // 스크롤을 맨 아래로
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log(`💬 [${role}]: ${text}`);
-}
+  }
 
 /**
- * 추천 업무 카드 UI 추가
+ * 업무 플래닝 카드 UI 추가
  * @param {Object} data - { tasks, summary, owner, target_date }
  */
 function addTaskRecommendations(data) {
@@ -164,7 +158,7 @@ function addTaskRecommendations(data) {
   // 요약 메시지
   const summaryDiv = document.createElement('div');
   summaryDiv.className = 'bubble';
-  summaryDiv.textContent = summary || '오늘의 추천 업무입니다!';
+  summaryDiv.textContent = summary || '오늘의 업무 플래닝입니다!';
   container.appendChild(summaryDiv);
   
   // 안내 메시지
@@ -198,8 +192,7 @@ function addTaskRecommendations(data) {
   // 스크롤을 맨 아래로
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log(`🎯 추천 업무 ${tasks.length}개 표시`);
-}
+  }
 
 /**
  * 업무 카드 생성
@@ -272,8 +265,7 @@ function toggleTaskSelection(card, index) {
   const saveButton = card.closest('.task-recommendations-container').querySelector('.task-save-button');
   saveButton.disabled = selectedTasks.size === 0;
   
-  console.log(`✅ 선택된 업무: ${selectedTasks.size}개`);
-}
+  }
 
 /**
  * 선택된 업무 저장
@@ -314,8 +306,7 @@ async function handleSaveSelectedTasks() {
       saveButton.textContent = '선택 완료';
     }
   } catch (error) {
-    console.error('❌ 저장 오류:', error);
-    addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
+        addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
     saveButton.disabled = false;
     saveButton.textContent = '선택 완료';
   }
@@ -329,11 +320,9 @@ function togglePanel() {
   
   if (isPanelVisible) {
     chatPanel.style.display = 'flex';
-    console.log('👁️ 채팅 패널 표시');
-  } else {
+      } else {
     chatPanel.style.display = 'none';
-    console.log('🙈 채팅 패널 숨김');
-  }
+      }
 }
 
 /**
@@ -349,6 +338,5 @@ export function getMessages() {
 export function clearMessages() {
   messages = [];
   messagesContainer.innerHTML = '';
-  console.log('🗑️ 메시지 초기화');
-}
+  }
 

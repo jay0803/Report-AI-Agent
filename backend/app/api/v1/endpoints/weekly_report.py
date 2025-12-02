@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import os
 
-from app.domain.weekly.chain import generate_weekly_report
-from app.domain.weekly.repository import WeeklyReportRepository
-from app.domain.weekly.schemas import WeeklyReportCreate, WeeklyReportResponse, WeeklyReportListResponse
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.weekly.chain import generate_weekly_report
+from app.domain.report.weekly.repository import WeeklyReportRepository
+from app.domain.report.weekly.schemas import WeeklyReportCreate, WeeklyReportResponse, WeeklyReportListResponse
+from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import get_db
 from app.reporting.pdf_generator.weekly_report_pdf import WeeklyReportPDFGenerator
 
@@ -82,6 +82,8 @@ async def generate_weekly(
             print(f"📄 주간 보고서 PDF 생성 완료: backend/output/report_result/weekly/{pdf_filename}")
         except Exception as pdf_error:
             print(f"⚠️  PDF 생성 실패 (보고서는 저장됨): {str(pdf_error)}")
+            import traceback
+            traceback.print_exc()
         
         return WeeklyReportGenerateResponse(
             success=True,

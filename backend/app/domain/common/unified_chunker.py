@@ -162,90 +162,6 @@ def _chunk_task(
 
 
 # ========================================
-# KPI 청킹
-# ========================================
-def _chunk_kpi(
-    kpi: Any,
-    unified: UnifiedCanonical,
-    kpi_idx: int
-) -> List[Dict[str, Any]]:
-    """
-    KPI를 청크로 변환
-    
-    Args:
-        kpi: KPISection 객체
-        unified: UnifiedCanonical 객체
-        kpi_idx: KPI 인덱스
-        
-    Returns:
-        청크 리스트
-    """
-    # 텍스트 생성
-    text_parts = [f"KPI: {kpi.kpi_name}"]
-    
-    if kpi.category:
-        text_parts.append(f"카테고리: {kpi.category}")
-    
-    if kpi.value:
-        value_text = f"값: {kpi.value}"
-        if kpi.unit:
-            value_text += f" {kpi.unit}"
-        text_parts.append(value_text)
-    
-    if kpi.delta:
-        text_parts.append(f"증감: {kpi.delta}")
-    
-    if kpi.description:
-        text_parts.append(f"설명: {kpi.description}")
-    
-    if kpi.note:
-        text_parts.append(f"비고: {kpi.note}")
-    
-    text = "\n".join(text_parts)
-    
-    # 메타데이터
-    metadata = {
-        "chunk_type": "kpi",
-        "doc_id": unified.doc_id,
-        "doc_type": unified.doc_type,
-        "owner": unified.owner,
-        "kpi_name": kpi.kpi_name,
-        "kpi_category": kpi.category or ""
-    }
-    
-    # 날짜 정보
-    if unified.single_date:
-        metadata["date"] = unified.single_date.isoformat()
-    if unified.period_start:
-        metadata["period_start"] = unified.period_start.isoformat()
-    if unified.period_end:
-        metadata["period_end"] = unified.period_end.isoformat()
-    
-    # 소스 파일
-    if "source_file" in unified.metadata:
-        metadata["source_file"] = unified.metadata["source_file"]
-    
-    # 페이지 인덱스 (KPI 문서의 경우)
-    if "page_index" in unified.metadata:
-        metadata["page_index"] = unified.metadata["page_index"]
-    
-    # 텍스트 길이 체크 및 분할
-    if len(text) <= MAX_CHUNK_LENGTH:
-        chunk_id = generate_chunk_id(unified.doc_id, "kpi", str(kpi_idx), "0")
-        return [_create_chunk(chunk_id, text, metadata)]
-    else:
-        text_parts = _split_text_by_length(text, MAX_CHUNK_LENGTH)
-        chunks = []
-        for idx, part in enumerate(text_parts):
-            chunk_id = generate_chunk_id(unified.doc_id, "kpi", str(kpi_idx), str(idx))
-            part_metadata = metadata.copy()
-            part_metadata["part"] = idx + 1
-            part_metadata["total_parts"] = len(text_parts)
-            chunks.append(_create_chunk(chunk_id, part, part_metadata))
-        return chunks
-
-
-# ========================================
 # Issue/Plan 청킹
 # ========================================
 def _chunk_issue(
@@ -347,8 +263,6 @@ def _chunk_summary(unified: UnifiedCanonical) -> List[Dict[str, Any]]:
     stats = []
     if unified.sections.tasks:
         stats.append(f"작업 {len(unified.sections.tasks)}건")
-    if unified.sections.kpis:
-        stats.append(f"KPI {len(unified.sections.kpis)}건")
     if unified.sections.issues:
         stats.append(f"이슈 {len(unified.sections.issues)}건")
     if unified.sections.plans:
@@ -366,7 +280,6 @@ def _chunk_summary(unified: UnifiedCanonical) -> List[Dict[str, Any]]:
         "doc_type": unified.doc_type,
         "owner": unified.owner,
         "task_count": len(unified.sections.tasks),
-        "kpi_count": len(unified.sections.kpis),
         "issue_count": len(unified.sections.issues),
         "plan_count": len(unified.sections.plans)
     }
@@ -428,12 +341,7 @@ def chunk_unified(
         task_chunks = _chunk_task(task, unified, idx)
         chunks.extend(task_chunks)
     
-    # (2) KPIs 청킹
-    for idx, kpi in enumerate(unified.sections.kpis):
-        kpi_chunks = _chunk_kpi(kpi, unified, idx)
-        chunks.extend(kpi_chunks)
-    
-    # (3) Issues 청킹
+    # (2) Issues 청킹
     for idx, issue in enumerate(unified.sections.issues):
         issue_chunks = _chunk_issue(issue, unified, idx)
         chunks.extend(issue_chunks)

@@ -29,9 +29,6 @@ function createLoginWindow() {
   // 로그인 페이지 로드 (이미 로그인되어 있으면 자동으로 /start로 이동)
   loginWin.loadURL('http://localhost:8000/login');
 
-  // 개발자 도구는 F12로 수동으로 열 수 있음
-  // loginWin.webContents.openDevTools();
-
   loginWin.on('closed', () => {
     console.log('🔐 로그인 창 닫힘');
     loginWin = null;
@@ -114,22 +111,6 @@ function createCharacterWindow() {
 
   console.log('📦 캐릭터 로딩 중...');
 
-  // 🔥 개발자 도구 자동 열기 (detach 모드)
-  characterWin.webContents.openDevTools({ mode: 'detach' });
-  console.log('🛠️ 개발자 도구 열림 (detach 모드)');
-
-  // 단축키 (F12, Ctrl+Shift+I: 개발자 도구 토글)
-  characterWin.webContents.on('before-input-event', (event, input) => {
-    // F12로 개발자 도구 (별도 창으로 열기)
-    if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) {
-      if (characterWin.webContents.isDevToolsOpened()) {
-        characterWin.webContents.closeDevTools();
-      } else {
-        characterWin.webContents.openDevTools({ mode: 'detach' });
-      }
-    }
-  });
-
   characterWin.webContents.on('did-finish-load', () => {
     console.log('✅ 캐릭터 로드 완료!');
     
@@ -155,9 +136,6 @@ function createCharacterWindow() {
     console.log('🎭 캐릭터 창 닫힘');
     characterWin = null;
   });
-
-  // 개발자 도구 (디버깅용)
-  // characterWin.webContents.openDevTools();
 }
 
 // 렌더러에서 클릭-스루 영역 정보 받기
@@ -265,7 +243,6 @@ async function waitForBackend(maxRetries = 60) {
 app.whenReady().then(async () => {
   console.log('🚀 일렉트론 앱 시작!');
   console.log('📝 세션 기반 - 앱 종료 시 로그인 정보 삭제됨');
-  console.log('⌨️  단축키: ESC = 종료, F12 = 개발자 도구');
   
   // 백엔드 서버 시작
   console.log('🔧 백엔드 서버 시작 중...');

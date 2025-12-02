@@ -14,17 +14,17 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import os
 
-from app.domain.daily.fsm_state import DailyFSMContext
-from app.domain.daily.time_slots import generate_time_slots
-from app.domain.daily.task_parser import TaskParser
-from app.domain.daily.daily_fsm import DailyReportFSM
-from app.domain.daily.daily_builder import build_daily_report
-from app.domain.daily.session_manager import get_session_manager
-from app.domain.daily.main_tasks_store import get_main_tasks_store
-from app.domain.daily.repository import DailyReportRepository
-from app.domain.daily.schemas import DailyReportCreate
+from app.domain.report.daily.fsm_state import DailyFSMContext
+from app.domain.report.daily.time_slots import generate_time_slots
+from app.domain.report.daily.task_parser import TaskParser
+from app.domain.report.daily.daily_fsm import DailyReportFSM
+from app.domain.report.daily.daily_builder import build_daily_report
+from app.domain.report.daily.session_manager import get_session_manager
+from app.domain.report.daily.main_tasks_store import get_main_tasks_store
+from app.domain.report.daily.repository import DailyReportRepository
+from app.domain.report.daily.schemas import DailyReportCreate
 from app.llm.client import get_llm
-from app.domain.report.schemas import CanonicalReport
+from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import get_db
 from app.reporting.pdf_generator.daily_report_pdf import DailyReportPDFGenerator
 from ingestion.auto_ingest import ingest_single_report
@@ -91,10 +91,13 @@ async def start_daily_report(request: DailyStartRequest):
             target_date=request.target_date
         )
         
-        # main_tasks가 없으면 빈 리스트로 설정 (경고 메시지 출력)
-        if main_tasks is None:
+        # main_tasks가 없으면 에러 반환 (프론트엔드에서 업무 플래닝 기능으로 리다이렉트)
+        if main_tasks is None or len(main_tasks) == 0:
             print(f"[WARNING] main_tasks가 저장되지 않음: {request.owner}, {request.target_date}")
-            main_tasks = []
+            raise HTTPException(
+                status_code=400,
+                detail="금일 업무 계획이 설정되지 않았습니다. 먼저 '금일 업무 플래닝' 기능을 사용하여 오늘의 업무를 설정해주세요."
+            )
         
         # FSM 컨텍스트 생성
         context = DailyFSMContext(
@@ -192,52 +195,65 @@ async def answer_daily_question(
                 )
                 
                 if existing_report:
-                    # 기존 보고서가 있으면 병합
+                    # 기존 보고서가 있으면 병합 (CanonicalReport 구조 내에서)
                     print(f"📝 기존 보고서 발견 - 병합 모드")
                     
                     existing_json = existing_report.report_json.copy()
-                    report_dict = report.model_dump(mode='json')
                     
-                    # 🔥 병합 전략:
-                    # - plans: existing에서 가져옴 (예정 업무는 select_main_tasks에서 이미 저장됨)
-                    # - tasks: new에서 가져옴 (실제 완료 업무는 FSM에서 입력됨)
-                    # - issues: new에서 가져옴 (미종결 업무)
-                    # - metadata: 병합
+                    # 기존 데이터를 CanonicalReport로 파싱
+                    from app.domain.report.core.canonical_models import CanonicalReport
+                    try:
+                        existing_canonical = CanonicalReport(**existing_json)
+                    except Exception as e:
+                        print(f"⚠️  기존 데이터 파싱 실패, 새 데이터로 덮어쓰기: {e}")
+                        existing_canonical = None
                     
-                    existing_plans = existing_json.get("plans", [])
-                    new_tasks = report_dict.get("tasks", [])  # 실제 완료 업무만
+                    # 병합 전략: CanonicalReport 구조 내에서 병합
+                    if existing_canonical and existing_canonical.daily:
+                        # 기존 daily.plans (익일 계획) 유지, 새 보고서의 다른 데이터로 업데이트
+                        merged_daily = existing_canonical.daily.model_copy(deep=True)
+                        
+                        # 새로운 보고서의 데이터로 업데이트
+                        if report.daily:
+                            merged_daily.summary_tasks = report.daily.summary_tasks
+                            merged_daily.detail_tasks = report.daily.detail_tasks
+                            merged_daily.pending = report.daily.pending
+                            # plans는 기존 것 유지 (이미 저장된 익일 계획 보존)
+                            if not merged_daily.plans and report.daily.plans:
+                                merged_daily.plans = report.daily.plans
+                            merged_daily.notes = report.daily.notes if report.daily.notes else merged_daily.notes
+                        
+                        # 병합된 CanonicalReport 생성
+                        merged_report = CanonicalReport(
+                            report_id=report.report_id,
+                            report_type=report.report_type,
+                            owner=report.owner,
+                            period_start=report.period_start,
+                            period_end=report.period_end,
+                            daily=merged_daily
+                        )
+                    else:
+                        # 기존 데이터가 형식이 맞지 않으면 새 데이터 사용
+                        merged_report = report
                     
-                    # 병합된 데이터 생성
-                    merged_json = {
-                        **report_dict,
-                        "plans": existing_plans if existing_plans else report_dict.get("plans", []),  # 🔥 예정 업무 유지
-                        "tasks": new_tasks,  # 🔥 실제 완료 업무만
-                        "metadata": {
-                            **existing_json.get("metadata", {}),
-                            **report_dict.get("metadata", {}),
-                            "status": "completed",
-                            "merged": True
-                        }
-                    }
+                    # 순수한 CanonicalReport 형식으로 저장 (추가 필드 없음)
+                    report_dict = merged_report.model_dump(mode='json')
                     
-                    from app.domain.daily.schemas import DailyReportUpdate
+                    from app.domain.report.daily.schemas import DailyReportUpdate
                     db_report = DailyReportRepository.update(
                         db,
                         existing_report,
-                        DailyReportUpdate(report_json=merged_json)
+                        DailyReportUpdate(report_json=report_dict)
                     )
                     
                     print(f"💾 운영 DB 병합 완료: {report.owner} - {report.period_start}")
-                    print(f"   - 예정 업무(plans): {len(existing_plans)}개")
-                    print(f"   - 실제 완료(tasks): {len(new_tasks)}개")
+                    if merged_report.daily:
+                        print(f"   - 익일 계획(plans): {len(merged_report.daily.plans)}개")
+                        print(f"   - 세부 업무(detail_tasks): {len(merged_report.daily.detail_tasks)}개")
                     is_created = False
                 else:
-                    # 기존 보고서가 없으면 새로 생성
+                    # 기존 보고서가 없으면 새로 생성 (순수 CanonicalReport 형식)
                     report_dict = report.model_dump(mode='json')
-                    report_dict["metadata"] = {
-                        **report_dict.get("metadata", {}),
-                        "status": "completed"
-                    }
                     
                     report_create = DailyReportCreate(
                         owner=report.owner,
@@ -260,6 +276,8 @@ async def answer_daily_question(
                     print(f"📄 일일 보고서 PDF 생성 완료: backend/output/report_result/daily/{pdf_filename}")
                 except Exception as pdf_error:
                     print(f"⚠️  PDF 생성 실패 (보고서는 저장됨): {str(pdf_error)}")
+                    import traceback
+                    traceback.print_exc()
                 
                 # 🔥 벡터 DB 자동 저장 (비동기 작업, 실패해도 계속 진행)
                 try:
@@ -347,7 +365,7 @@ async def select_main_tasks(
     """
     금일 진행 업무 선택 및 저장
     
-    사용자가 TodayPlan Chain에서 추천받은 업무 중 
+    사용자가 TodayPlan Chain에서 플래닝받은 업무 중 
     실제로 수행할 업무를 선택하여 저장합니다.
     
     저장된 업무는:
@@ -377,51 +395,101 @@ async def select_main_tasks(
                 db, request.owner, request.target_date
             )
             
+            # CanonicalReport 구조로 부분 저장
+            from app.domain.report.core.canonical_models import CanonicalReport, CanonicalDaily
+            from app.domain.report.daily.daily_builder import generate_report_id
+            
+            new_plan_titles = [task.get("title", "") for task in request.main_tasks if task.get("title")]
+            
             if existing_report:
-                # 기존 보고서가 있으면 plans만 업데이트 (append 모드 고려)
-                report_json = existing_report.report_json.copy()
+                # 기존 보고서가 있으면 CanonicalReport 구조 내에서 업데이트
+                existing_json = existing_report.report_json.copy()
                 
-                # 🔥 예정 업무는 plans에 저장 (tasks는 실제 완료 업무용)
-                new_plan_titles = [task.get("title", "") for task in request.main_tasks if task.get("title")]
+                try:
+                    existing_canonical = CanonicalReport(**existing_json)
+                except Exception:
+                    # 기존 데이터가 형식이 안 맞으면 새로 생성
+                    existing_canonical = None
                 
-                if request.append and "plans" in report_json:
-                    # 기존 plans에 추가
-                    existing_plans = report_json.get("plans", [])
-                    report_json["plans"] = existing_plans + new_plan_titles
+                if existing_canonical and existing_canonical.daily:
+                    # 기존 daily 구조 유지하고 summary_tasks만 업데이트
+                    updated_daily = existing_canonical.daily.model_copy(deep=True)
+                    
+                    if request.append:
+                        # 기존 summary_tasks에 추가
+                        existing_summary = updated_daily.summary_tasks.copy()
+                        updated_daily.summary_tasks = existing_summary + new_plan_titles
+                    else:
+                        # 덮어쓰기
+                        updated_daily.summary_tasks = new_plan_titles
+                    
+                    updated_report = CanonicalReport(
+                        report_id=existing_canonical.report_id,
+                        report_type=existing_canonical.report_type,
+                        owner=existing_canonical.owner,
+                        period_start=existing_canonical.period_start,
+                        period_end=existing_canonical.period_end,
+                        daily=updated_daily
+                    )
                 else:
-                    # 덮어쓰기
-                    report_json["plans"] = new_plan_titles
+                    # 기존 데이터가 없거나 형식이 안 맞으면 새로 생성
+                    report_id = generate_report_id(request.owner, request.target_date)
+                    updated_daily = CanonicalDaily(
+                        header={
+                            "작성일자": request.target_date.isoformat(),
+                            "성명": request.owner
+                        },
+                        summary_tasks=new_plan_titles,
+                        detail_tasks=[],
+                        pending=[],
+                        plans=[],
+                        notes=""
+                    )
+                    updated_report = CanonicalReport(
+                        report_id=report_id,
+                        report_type="daily",
+                        owner=request.owner,
+                        period_start=request.target_date,
+                        period_end=request.target_date,
+                        daily=updated_daily
+                    )
                 
-                report_json["metadata"] = report_json.get("metadata", {})
-                report_json["metadata"]["status"] = "in_progress"
-                
-                from app.domain.daily.schemas import DailyReportUpdate
+                from app.domain.report.daily.schemas import DailyReportUpdate
                 DailyReportRepository.update(
                     db,
                     existing_report,
-                    DailyReportUpdate(report_json=report_json)
+                    DailyReportUpdate(report_json=updated_report.model_dump(mode='json'))
                 )
                 print(f"💾 금일 진행 업무 업데이트 완료: {request.owner} - {request.target_date}")
             else:
-                # 새로운 부분 보고서 생성
-                # 🔥 예정 업무는 plans에 저장 (tasks는 실제 완료 업무용)
-                partial_report = {
-                    "report_type": "daily",
-                    "owner": request.owner,
-                    "period_start": request.target_date.isoformat(),
-                    "period_end": request.target_date.isoformat(),
-                    "tasks": [],  # 🔥 비어있음 (FSM 완료 시 실제 완료 업무로 채워짐)
-                    "issues": [],
-                    "plans": [task.get("title", "") for task in request.main_tasks if task.get("title")],  # 🔥 예정 업무
-                    "metadata": {"status": "in_progress", "main_tasks_only": True}
-                }
+                # 새로운 부분 보고서 생성 (CanonicalReport 구조)
+                report_id = generate_report_id(request.owner, request.target_date)
+                partial_daily = CanonicalDaily(
+                    header={
+                        "작성일자": request.target_date.isoformat(),
+                        "성명": request.owner
+                    },
+                    summary_tasks=new_plan_titles,
+                    detail_tasks=[],
+                    pending=[],
+                    plans=[],
+                    notes=""
+                )
+                partial_report = CanonicalReport(
+                    report_id=report_id,
+                    report_type="daily",
+                    owner=request.owner,
+                    period_start=request.target_date,
+                    period_end=request.target_date,
+                    daily=partial_daily
+                )
                 
                 DailyReportRepository.create(
                     db,
                     DailyReportCreate(
                         owner=request.owner,
                         report_date=request.target_date,
-                        report_json=partial_report
+                        report_json=partial_report.model_dump(mode='json')
                     )
                 )
                 print(f"💾 금일 진행 업무 생성 완료: {request.owner} - {request.target_date}")
@@ -537,42 +605,94 @@ async def update_main_tasks(
                 db, request.owner, request.target_date
             )
             
+            # CanonicalReport 구조로 업데이트
+            from app.domain.report.core.canonical_models import CanonicalReport, CanonicalDaily
+            from app.domain.report.daily.daily_builder import generate_report_id
+            
+            summary_tasks = [task.get("title", "") for task in request.main_tasks if task.get("title")]
+            
             if existing_report:
-                # tasks 필드만 업데이트
-                report_json = existing_report.report_json.copy()
-                report_json["tasks"] = request.main_tasks
+                # 기존 보고서가 있으면 CanonicalReport 구조 내에서 업데이트
+                existing_json = existing_report.report_json.copy()
                 
-                # status는 유지 (in_progress 또는 completed)
-                if "metadata" not in report_json:
-                    report_json["metadata"] = {}
+                try:
+                    existing_canonical = CanonicalReport(**existing_json)
+                except Exception:
+                    # 기존 데이터가 형식이 안 맞으면 새로 생성
+                    existing_canonical = None
                 
-                from app.domain.daily.schemas import DailyReportUpdate
+                if existing_canonical and existing_canonical.daily:
+                    # 기존 daily 구조 유지하고 summary_tasks만 업데이트
+                    updated_daily = existing_canonical.daily.model_copy(deep=True)
+                    updated_daily.summary_tasks = summary_tasks
+                    
+                    updated_report = CanonicalReport(
+                        report_id=existing_canonical.report_id,
+                        report_type=existing_canonical.report_type,
+                        owner=existing_canonical.owner,
+                        period_start=existing_canonical.period_start,
+                        period_end=existing_canonical.period_end,
+                        daily=updated_daily
+                    )
+                else:
+                    # 기존 데이터가 없거나 형식이 안 맞으면 새로 생성
+                    report_id = generate_report_id(request.owner, request.target_date)
+                    updated_daily = CanonicalDaily(
+                        header={
+                            "작성일자": request.target_date.isoformat(),
+                            "성명": request.owner
+                        },
+                        summary_tasks=summary_tasks,
+                        detail_tasks=[],
+                        pending=[],
+                        plans=[],
+                        notes=""
+                    )
+                    updated_report = CanonicalReport(
+                        report_id=report_id,
+                        report_type="daily",
+                        owner=request.owner,
+                        period_start=request.target_date,
+                        period_end=request.target_date,
+                        daily=updated_daily
+                    )
+                
+                from app.domain.report.daily.schemas import DailyReportUpdate
                 DailyReportRepository.update(
                     db,
                     existing_report,
-                    DailyReportUpdate(report_json=report_json)
+                    DailyReportUpdate(report_json=updated_report.model_dump(mode='json'))
                 )
                 print(f"💾 금일 진행 업무 수정 완료 (DB): {request.owner} - {request.target_date}")
             else:
-                # 보고서가 없으면 새로 생성
-                partial_report = {
-                    "report_type": "daily",
-                    "owner": request.owner,
-                    "period_start": request.target_date.isoformat(),
-                    "period_end": request.target_date.isoformat(),
-                    "tasks": request.main_tasks,
-                    "kpis": [],
-                    "issues": [],
-                    "plans": [],
-                    "metadata": {"status": "in_progress", "main_tasks_only": True}
-                }
+                # 보고서가 없으면 새로 생성 (CanonicalReport 구조)
+                report_id = generate_report_id(request.owner, request.target_date)
+                partial_daily = CanonicalDaily(
+                    header={
+                        "작성일자": request.target_date.isoformat(),
+                        "성명": request.owner
+                    },
+                    summary_tasks=summary_tasks,
+                    detail_tasks=[],
+                    pending=[],
+                    plans=[],
+                    notes=""
+                )
+                partial_report = CanonicalReport(
+                    report_id=report_id,
+                    report_type="daily",
+                    owner=request.owner,
+                    period_start=request.target_date,
+                    period_end=request.target_date,
+                    daily=partial_daily
+                )
                 
                 DailyReportRepository.create(
                     db,
                     DailyReportCreate(
                         owner=request.owner,
                         report_date=request.target_date,
-                        report_json=partial_report
+                        report_json=partial_report.model_dump(mode='json')
                     )
                 )
                 print(f"💾 금일 진행 업무 생성 완료 (DB): {request.owner} - {request.target_date}")
