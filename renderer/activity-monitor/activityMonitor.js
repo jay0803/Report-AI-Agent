@@ -54,11 +54,7 @@ export function setupActivityMonitor(options) {
   // 현재 모드의 설정 가져오기
   const config = CONFIG[mode];
   
-  console.log(`🔍 Activity Monitor 시작 (${mode} 모드)`);
-  console.log(`   - Idle 기준: ${config.idleThresholdMs / 1000}초`);
-  console.log(`   - 장시간 활동 기준: ${config.longActiveThresholdMs / 1000}초`);
-  
-  // ============================================
+        // ============================================
   // 내부 상태 변수
   // ============================================
   let lastInputAt = Date.now();           // 마지막 입력 시각
@@ -76,8 +72,7 @@ export function setupActivityMonitor(options) {
     
     // Idle 상태에서 벗어남 → 새 세션 시작
     if (isIdle) {
-      console.log('✅ 활동 재개 - 새 세션 시작');
-      isIdle = false;
+            isIdle = false;
       sessionStartAt = now;
       hasNotifiedLongActive = false;
     }
@@ -97,14 +92,11 @@ export function setupActivityMonitor(options) {
     if (!isIdle && timeSinceLastInput >= config.idleThresholdMs) {
       // Idle 상태로 전환
       isIdle = true;
-      console.log(`😴 Idle 상태 진입 (${timeSinceLastInput / 1000}초 동안 입력 없음)`);
-      
-      // Idle 콜백 호출
+            // Idle 콜백 호출
       try {
         onIdle();
       } catch (error) {
-        console.error('❌ onIdle 콜백 실행 중 오류:', error);
-      }
+              }
       
       // 세션 리셋 (Idle 상태에서는 세션 종료)
       sessionStartAt = now;
@@ -119,14 +111,11 @@ export function setupActivityMonitor(options) {
     if (!isIdle && !hasNotifiedLongActive) {
       if (currentSessionDuration >= config.longActiveThresholdMs) {
         hasNotifiedLongActive = true;
-        console.log(`⏰ 장시간 활동 감지 (${currentSessionDuration / 1000}초)`);
-        
-        // 장시간 활동 콜백 호출
+                // 장시간 활동 콜백 호출
         try {
           onLongActive();
         } catch (error) {
-          console.error('❌ onLongActive 콜백 실행 중 오류:', error);
-        }
+                  }
       }
     }
     
@@ -134,8 +123,7 @@ export function setupActivityMonitor(options) {
     if (mode === 'dev' && !isIdle) {
       const remaining = (config.longActiveThresholdMs - currentSessionDuration) / 1000;
       if (remaining > 0) {
-        console.log(`⏱️  장시간 활동까지 ${remaining.toFixed(1)}초 남음`);
-      }
+              }
     }
   }
   
@@ -148,21 +136,15 @@ export function setupActivityMonitor(options) {
     window.addEventListener(eventType, handleUserInput, { passive: true });
   });
   
-  console.log('👂 입력 이벤트 리스너 등록 완료:', events.join(', '));
-  
-  // ============================================
+    // ============================================
   // 주기적 체크 타이머 시작
   // ============================================
   checkTimer = setInterval(checkActivity, config.checkIntervalMs);
-  console.log(`⏲️  ${config.checkIntervalMs}ms 간격으로 체크 시작`);
-  
-  // ============================================
+    // ============================================
   // Cleanup 함수 반환
   // ============================================
   return function cleanup() {
-    console.log('🧹 Activity Monitor 정리 중...');
-    
-    // 이벤트 리스너 제거
+        // 이벤트 리스너 제거
     events.forEach(eventType => {
       window.removeEventListener(eventType, handleUserInput);
     });
@@ -173,8 +155,7 @@ export function setupActivityMonitor(options) {
       checkTimer = null;
     }
     
-    console.log('✅ Activity Monitor 정리 완료');
-  };
+      };
 }
 
 /**

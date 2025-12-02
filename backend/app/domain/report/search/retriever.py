@@ -1,7 +1,7 @@
 """
 Unified Retriever
 
-daily_reports_advanced 컬렉션에서 doc_type별로 검색을 수행합니다.
+reports 컬렉션에서 doc_type별로 검색을 수행합니다.
 
 Author: AI Assistant
 Created: 2025-11-18
@@ -39,7 +39,7 @@ class UnifiedRetriever:
         초기화
         
         Args:
-            collection: daily_reports_advanced Collection 객체
+            collection: reports Collection 객체
             openai_api_key: OpenAI API 키 (None이면 환경변수에서 가져옴)
             embedding_model_type: 임베딩 모델 타입 ("hf" 또는 "openai", None이면 환경변수에서 가져옴)
         """
@@ -58,10 +58,14 @@ class UnifiedRetriever:
         period_end: Optional[str] = None,
         week: Optional[str] = None,
         n_results: int = 5,
-        chunk_types: Optional[List[str]] = None
+        chunk_types: Optional[List[str]] = None,
+        doc_ids: Optional[List[str]] = None
     ) -> List[UnifiedSearchResult]:
         """
-        일일/주간/월간 보고서 검색
+        일일보고서 청크 검색 (새로운 4청크 구조 기반)
+        
+        일일보고서의 의미 단위 청크(summary, detail, pending, plan_note)를 검색합니다.
+        주간/월간 보고서 생성 시에도 일일보고서 청크를 사용하므로 이 메서드를 통해 검색합니다.
         
         Args:
             query: 검색 쿼리
@@ -69,8 +73,14 @@ class UnifiedRetriever:
             single_date: 단일 날짜 (YYYY-MM-DD)
             period_start: 시작 날짜
             period_end: 종료 날짜
+            week: ISO week 필터 (예: "2025-W01")
             n_results: 결과 개수
-            chunk_types: 청크 타입 필터 (예: ["task", "plan"])
+            chunk_types: 청크 타입 필터 (예: ["summary", "detail", "pending", "plan_note"])
+                - summary: 금일 진행 업무 요약
+                - detail: 세부 업무 목록
+                - pending: 미종결 업무
+                - plan_note: 익일 계획 및 특이사항
+            doc_ids: 사전 필터링된 문서 ID 목록 (날짜 범위 필터링 강제용)
             
         Returns:
             검색 결과 리스트
@@ -83,7 +93,11 @@ class UnifiedRetriever:
             "report_type": {"$in": ["daily", "weekly", "monthly"]}
         })
         
-        # chunk_type 필터 (task 타입만 가져오기)
+        # doc_ids 필터 (날짜 범위 사전 필터링)
+        if doc_ids:
+            conditions.append({"doc_id": {"$in": doc_ids}})
+        
+        # chunk_type 필터 (새로운 4청크 구조: summary, detail, pending, plan_note)
         if chunk_types:
             conditions.append({
                 "chunk_type": {"$in": chunk_types}
@@ -98,25 +112,28 @@ class UnifiedRetriever:
             conditions.append({"week": week})
         
         # level 필터 (새로운 4청크 구조용)
-        # level="daily"만 검색 (기존 데이터는 제외)
+        # 현재 일일보고서 검색만 지원 (level="daily")
+        # 주간/월간 보고서 생성 시에도 일일보고서 청크만 사용하므로 이 필터로 충분
         conditions.append({"level": "daily"})
         
         # 날짜 필터 (새로운 구조: date 필드만 사용)
-        if single_date:
-            conditions.append({"date": single_date})
-        elif period_start and period_end:
-            # 일일보고서는 date 필드를 사용하므로, 기간 내 모든 날짜를 $in으로 검색
-            # ChromaDB는 날짜 문자열에 대해 $gte/$lte를 지원하지 않으므로 $in 사용
-            from datetime import datetime, timedelta
-            start = datetime.strptime(period_start, "%Y-%m-%d")
-            end = datetime.strptime(period_end, "%Y-%m-%d")
-            date_list = []
-            current = start
-            while current <= end:
-                date_list.append(current.strftime("%Y-%m-%d"))
-                current += timedelta(days=1)
-            # date 필드만 검색 (새로운 구조)
-            conditions.append({"date": {"$in": date_list}})
+        # doc_ids가 제공되면 날짜 필터는 생략 (이미 doc_ids로 필터링됨)
+        if not doc_ids:
+            if single_date:
+                conditions.append({"date": single_date})
+            elif period_start and period_end:
+                # 일일보고서는 date 필드를 사용하므로, 기간 내 모든 날짜를 $in으로 검색
+                # ChromaDB는 날짜 문자열에 대해 $gte/$lte를 지원하지 않으므로 $in 사용
+                from datetime import datetime, timedelta
+                start = datetime.strptime(period_start, "%Y-%m-%d")
+                end = datetime.strptime(period_end, "%Y-%m-%d")
+                date_list = []
+                current = start
+                while current <= end:
+                    date_list.append(current.strftime("%Y-%m-%d"))
+                    current += timedelta(days=1)
+                # date 필드만 검색 (새로운 구조)
+                conditions.append({"date": {"$in": date_list}})
         
         # 조건이 하나만 있으면 그대로, 여러개면 $and로 묶기
         if len(conditions) == 1:
@@ -282,7 +299,7 @@ class UnifiedRetriever:
                     print(f"[ERROR] ⚠️  ChromaDB 컬렉션 구조 문제 감지!")
                     print(f"[ERROR] 컬렉션을 재생성해야 합니다:")
                     print(f"[ERROR]   python debug/fix_chromadb_collection.py")
-                    print(f"[ERROR]   python -m ingestion.ingest_daily_reports")
+                    print(f"[ERROR]   python -m backend.ingestion.ingest_mock_reports")
                     print(f"[ERROR] 의미 검색을 위해 컬렉션 재생성이 필요합니다.")
                 
                 import traceback

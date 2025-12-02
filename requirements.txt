@@ -44,11 +44,13 @@ openai==1.57.0
 # ========================================
 # LangChain & RAG
 # ========================================
-langchain==0.3.27
-langchain-community==0.3.27
-langchain-core==0.3.79
-langchain-openai==0.2.13
-langchain-text-splitters==0.3.11
+langchain==1.1.0
+langchain-core==1.1.0
+langgraph==1.0.4
+langgraph-checkpoint==3.0.1
+langgraph-prebuilt==1.0.5
+langgraph-sdk==0.2.10
+ormsgpack==1.12.0
 langsmith==0.4.43
 
 # ========================================
@@ -113,7 +115,8 @@ sentence-transformers==3.3.1
 # 통합 버전 (2025-11-21)
 # - chromadb==0.5.23: 브레인스토밍 데이터 호환성
 # - pydantic==2.12.4: 최신 안정 버전
-# - langchain==0.3.27: 최신 안정 버전
+# - langchain==1.1.0: LangChain 1.x 버전 업그레이드
+# - langgraph==1.0.4: LangGraph 지원 추가
 # - sentence-transformers==3.3.1: HuggingFace 임베딩 모델 지원 (추가됨)
 
 # 제거된 패키지 (확인된 미사용):

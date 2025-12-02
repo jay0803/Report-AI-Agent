@@ -9,7 +9,7 @@ import uuid
 import json
 
 from app.domain.report.core.canonical_models import CanonicalReport, CanonicalWeekly
-from app.infrastructure.vector_store_advanced import get_vector_store
+from app.infrastructure.vector_store_report import get_report_vector_store
 from app.domain.report.search.retriever import UnifiedRetriever
 from app.llm.client import get_llm
 from app.core.config import settings
@@ -49,7 +49,7 @@ def generate_weekly_report(
     
     # 2. 벡터DB에서 주간 데이터 검색 (새로운 4청크 구조)
     import os
-    vector_store = get_vector_store()
+    vector_store = get_report_vector_store()
     collection = vector_store.get_collection()
     embedding_model_type = os.getenv("REPORT_EMBEDDING_MODEL_TYPE", "hf")
     retriever = UnifiedRetriever(
@@ -90,17 +90,33 @@ def generate_weekly_report(
 {json.dumps(search_results, ensure_ascii=False, indent=2)}
 
 위 데이터를 기반으로 주간보고서를 생성해주세요.
-week = "{week_str}"인 모든 청크를 분석하여 주간보고서를 작성하세요."""
+
+**중요**: 
+- week = "{week_str}"인 모든 청크를 분석하여 주간보고서를 작성하세요.
+- 해당 주의 날짜 범위: {monday.isoformat()} (월요일) ~ {friday.isoformat()} (금요일)
+- weekday_tasks 필드는 반드시 다음 5개 날짜를 모두 포함해야 합니다:
+  * "{monday.isoformat()}" (월요일)
+  * "{(monday + timedelta(days=1)).isoformat()}" (화요일)
+  * "{(monday + timedelta(days=2)).isoformat()}" (수요일)
+  * "{(monday + timedelta(days=3)).isoformat()}" (목요일)
+  * "{friday.isoformat()}" (금요일)
+- 각 날짜별로 chunk_type="detail" 청크에서 업무를 추출하여 배열로 작성하세요.
+- 업무가 없더라도 빈 배열([])로라도 해당 날짜는 반드시 포함하세요."""
     
     # 5. LLM 호출
     try:
+        # 프롬프트 내 JSON 예시의 중괄호는 이스케이프되어 있으므로 .format() 사용 가능
+        system_prompt = WEEKLY_REPORT_RAG_PROMPT.format(week_number=week_str)
         response = llm_client.complete_json(
-            system_prompt=WEEKLY_REPORT_RAG_PROMPT.format(week_number=week_str),
+            system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.7
         )
         
         weekly_data = response if isinstance(response, dict) else json.loads(response)
+        
+        # 디버그: LLM 응답 확인
+        print(f"[DEBUG] LLM 응답 weekday_tasks 키: {list(weekly_data.get('weekday_tasks', {}).keys())}")
         
     except Exception as e:
         print(f"[ERROR] 주간보고서 생성 실패: {e}")
@@ -114,10 +130,36 @@ week = "{week_str}"인 모든 청크를 분석하여 주간보고서를 작성�
         "성명": owner
     }
     
+    # weekday_tasks의 날짜 키를 요일 키로 변환
+    weekday_tasks_raw = weekly_data.get("weekday_tasks", {})
+    weekday_tasks_converted = {}
+    
+    # 요일 한글 이름 매핑 (0=월요일, 4=금요일)
+    weekday_names = ['월요일', '화요일', '수요일', '목요일', '금요일']
+    
+    # 날짜별로 정렬하여 요일로 매핑
+    current_date = monday
+    for day_idx in range(5):
+        weekday_name = weekday_names[day_idx]
+        date_str = current_date.isoformat()
+        
+        # 날짜 키로 업무 찾기
+        if date_str in weekday_tasks_raw:
+            weekday_tasks_converted[weekday_name] = weekday_tasks_raw[date_str]
+            print(f"[DEBUG] {weekday_name} ({date_str}) 업무 {len(weekday_tasks_raw[date_str])}개 변환 완료")
+        else:
+            # 날짜 키가 없으면 빈 리스트
+            weekday_tasks_converted[weekday_name] = []
+            print(f"[WARNING] {weekday_name} ({date_str}) 업무 데이터 없음")
+        
+        current_date += timedelta(days=1)
+    
+    print(f"[DEBUG] 최종 weekday_tasks_converted: {list(weekday_tasks_converted.keys())}")
+    
     canonical_weekly = CanonicalWeekly(
         header=header,
         weekly_goals=weekly_data.get("weekly_goals", []),
-        weekday_tasks=weekly_data.get("weekday_tasks", {}),
+        weekday_tasks=weekday_tasks_converted,
         weekly_highlights=weekly_data.get("weekly_highlights", []),
         notes=weekly_data.get("notes", "")
     )

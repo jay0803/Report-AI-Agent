@@ -369,6 +369,6 @@ def bulk_ingest_daily_reports(year: Optional[int] = None, month: Optional[int] =
 
 
 if __name__ == "__main__":
-    # 11월 목업 데이터만 PostgreSQL에 저장
-    bulk_ingest_daily_reports(year=2025, month=11)
+    # 모든 목업 데이터를 PostgreSQL에 저장
+    bulk_ingest_daily_reports()
 

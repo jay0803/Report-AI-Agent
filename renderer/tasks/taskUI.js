@@ -1,9 +1,9 @@
 /**
- * 추천 업무 UI 관리
+ * 업무 플래닝 UI 관리
  * 
  * 구조:
  * 1. 요약은 일반 bubble 메시지로 표시
- * 2. 추천 UI는 .no-bubble로 독립 렌더링
+ * 2. 플래닝 UI는 .no-bubble로 독립 렌더링
  *    - 안내 문구
  *    - "직접 작성하기" 버튼
  *    - 250px 스크롤 카드 리스트
@@ -12,17 +12,15 @@
 
 import { saveSelectedTasks } from './taskService.js';
 
-// 추천 업무 선택 상태
+// 업무 플래닝 선택 상태
 let selectedTasks = new Set();
 let currentRecommendation = null;
 
 /**
- * 추천 업무 UI 표시 (bubble 밖 독립 렌더링)
+ * 업무 플래닝 UI 표시 (bubble 밖 독립 렌더링)
  */
 export function addTaskRecommendations(data, addMessage, messagesContainer) {
-  console.log('🔥 [TaskUI] addTaskRecommendations 호출:', data);
-  
-  const { tasks, summary, owner, target_date } = data;
+    const { tasks, summary, owner, target_date } = data;
   
   // 이전 상태 초기화 (Intent 고착 방지)
   resetTaskState();
@@ -30,9 +28,9 @@ export function addTaskRecommendations(data, addMessage, messagesContainer) {
   currentRecommendation = { owner, target_date, tasks };
   
   // 1) 요약은 일반 bubble 메시지로 표시
-  addMessage('assistant', summary || '오늘의 추천 업무입니다!');
+  addMessage('assistant', summary || '오늘의 업무 플래닝입니다!');
   
-  // 2) 추천 UI는 bubble 밖 독립 메시지로 표시
+  // 2) 플래닝 UI는 bubble 밖 독립 메시지로 표시
   const messageDiv = document.createElement('div');
   messageDiv.className = 'message assistant no-bubble';
   
@@ -50,8 +48,7 @@ export function addTaskRecommendations(data, addMessage, messagesContainer) {
   customTaskButton.className = 'task-custom-button';
   customTaskButton.textContent = '✏️ 직접 작성하기';
   customTaskButton.addEventListener('click', () => {
-    console.log('🔥 [TaskUI] 직접 작성하기 버튼 클릭');
-    showCustomTaskInput(owner, target_date, addMessage);
+        showCustomTaskInput(owner, target_date, addMessage);
   });
   container.appendChild(customTaskButton);
   
@@ -82,8 +79,7 @@ export function addTaskRecommendations(data, addMessage, messagesContainer) {
   // 스크롤
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
   
-  console.log(`✅ [TaskUI] 추천 업무 ${tasks.length}개 표시 완료`);
-}
+  }
 
 /**
  * 업무 카드 생성
@@ -145,8 +141,7 @@ function toggleTaskSelection(card, index, container) {
     saveButton.disabled = selectedTasks.size === 0;
   }
   
-  console.log(`✅ [TaskUI] 선택된 업무: ${selectedTasks.size}개`);
-}
+  }
 
 /**
  * 선택한 업무 저장 (금일 진행 업무로 등록)
@@ -175,15 +170,13 @@ async function handleSaveSelectedTasks(event, addMessage) {
       saveButton.closest('.task-recommendations-container').style.opacity = '0.5';
       saveButton.textContent = '저장 완료';
       
-      console.log('✅ [TaskUI] 업무 저장 완료 & 상태 초기화');
-    } else {
+          } else {
       addMessage('assistant', `❌ 저장 실패: ${result.message}`);
       saveButton.disabled = false;
       saveButton.textContent = '선택 완료';
     }
   } catch (error) {
-    console.error('❌ [TaskUI] 저장 오류:', error);
-    addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
+        addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
     saveButton.disabled = false;
     saveButton.textContent = '선택 완료';
   }
@@ -193,9 +186,7 @@ async function handleSaveSelectedTasks(event, addMessage) {
  * 직접 작성하기 모달 표시
  */
 export function showCustomTaskInput(owner, targetDate, addMessage) {
-  console.log('🔥 [TaskUI] 직접 작성하기 모달 표시');
-  
-  const existingModal = document.querySelector('.custom-task-modal');
+    const existingModal = document.querySelector('.custom-task-modal');
   if (existingModal) existingModal.remove();
   
   const modal = document.createElement('div');
@@ -278,10 +269,8 @@ export function showCustomTaskInput(owner, targetDate, addMessage) {
       // 상태 초기화 (Intent 고착 방지)
       resetTaskState();
       
-      console.log('✅ [TaskUI] 직접 입력 업무 저장 완료 & 상태 초기화');
-    } catch (err) {
-      console.error('❌ [TaskUI] 업무 저장 오류:', err);
-      addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
+          } catch (err) {
+            addMessage('assistant', '❌ 업무 저장 중 오류가 발생했습니다.');
       saveBtn.disabled = false;
       saveBtn.textContent = '저장';
     }
@@ -335,10 +324,9 @@ async function saveCustomTask(owner, targetDate, text) {
 }
 
 /**
- * 추천 업무 상태 초기화 (Intent 고착 방지)
+ * 업무 플래닝 상태 초기화 (Intent 고착 방지)
  */
 export function resetTaskState() {
   selectedTasks.clear();
   currentRecommendation = null;
-  console.log('🔄 [TaskUI] 추천 업무 상태 초기화 (Intent 고착 방지)');
-}
+  }

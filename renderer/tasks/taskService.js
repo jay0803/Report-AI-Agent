@@ -2,7 +2,7 @@
  * 업무 관련 API 호출 및 Intent Router
  * 
  * Intent 분류:
- * 1. task_recommend - 오늘 추천 업무
+ * 1. task_recommend - 오늘 업무 플래닝
  * 2. report_daily - 일일 보고서
  * 3. report_weekly - 주간 보고서
  * 4. report_monthly - 월간 보고서
@@ -16,20 +16,16 @@ const API_BASE = 'http://localhost:8000/api/v1';
  * Intent Router: 사용자 발화를 분석하여 적절한 기능으로 라우팅
  */
 export async function callChatModule(userText) {
-  console.log('📨 [Intent Router] 사용자 메시지:', userText);
+    const text = userText.toLowerCase().trim();
   
-  const text = userText.toLowerCase().trim();
-  
-  // Intent 1: 추천 업무 요청
+  // Intent 1: 업무 플래닝 요청
   if (isTaskRecommendationIntent(text)) {
-    console.log('🎯 [Intent] task_recommend');
-    return await getTodayPlan();
+        return await getTodayPlan();
   }
   
   // Intent 2: 일일 보고서
   if (isDailyReportIntent(text)) {
-    console.log('📝 [Intent] report_daily (reportService.js로 위임)');
-    return {
+        return {
       type: 'daily_report_trigger',
       data: '일일 보고서 작성을 시작합니다.'
     };
@@ -37,32 +33,28 @@ export async function callChatModule(userText) {
   
   // Intent 3: 주간 보고서
   if (isWeeklyReportIntent(text)) {
-    console.log('📊 [Intent] report_weekly');
-    return await generateWeeklyReport();
+        return await generateWeeklyReport();
   }
   
   // Intent 4: 월간 보고서
   if (isMonthlyReportIntent(text)) {
-    console.log('📈 [Intent] report_monthly');
-    return await generateMonthlyReport();
+        return await generateMonthlyReport();
   }
   
   // Intent 5: 실적(연간) 보고서
   if (isYearlyReportIntent(text)) {
-    console.log('📋 [Intent] report_yearly');
-    return await generateYearlyReport();
+        return await generateYearlyReport();
   }
   
   // Intent 6: 일반 대화
-  console.log('💬 [Intent] default - 일반 대화');
-  return {
+    return {
     type: 'text',
-    data: `"${userText}" - 답변을 준비 중입니다! 😊\n\n도움말:\n• "오늘 뭐할지 추천 좀" - 업무 추천\n• "일일 보고서 작성" - 일일 보고서\n• "주간 보고서" - 주간 보고서\n• "월간 보고서" - 월간 보고서\n• "실적 보고서" - 연간 실적 보고서`
+    data: `"${userText}" - 답변을 준비 중입니다! 😊\n\n도움말:\n• "오늘 뭐할지 추천 좀" - 업무 플래닝\n• "일일 보고서 작성" - 일일 보고서\n• "주간 보고서" - 주간 보고서\n• "월간 보고서" - 월간 보고서\n• "실적 보고서" - 연간 실적 보고서`
   };
 }
 
 /**
- * Intent 감지: 추천 업무
+ * Intent 감지: 업무 플래닝
  */
 function isTaskRecommendationIntent(text) {
   const keywords = ['추천', '뭐할', '뭐해', '업무', '할일', 'todo', 'task'];
@@ -105,7 +97,7 @@ function isYearlyReportIntent(text) {
 }
 
 /**
- * 오늘의 추천 업무 가져오기
+ * 오늘의 업무 플래닝 가져오기
  * 
  * 우선순위:
  * 1순위: 익일 업무 계획 데이터
@@ -114,9 +106,7 @@ function isYearlyReportIntent(text) {
  */
 export async function getTodayPlan() {
   try {
-    console.log('🔄 [API] /plan/today 호출 중...');
-    
-    const response = await fetch(`${API_BASE}/plan/today`, {
+        const response = await fetch(`${API_BASE}/plan/today`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -131,22 +121,19 @@ export async function getTodayPlan() {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 추천 업무 받음:', data);
-    
-    return {
+        return {
       type: 'task_recommendations',
       data: {
         tasks: data.recommended_tasks || [],
-        summary: data.summary || '오늘의 추천 업무입니다!',
+        summary: data.summary || '오늘의 업무 플래닝입니다!',
         owner: data.owner || 'junkyeong',
         target_date: data.target_date || new Date().toISOString().split('T')[0]
       }
     };
   } catch (error) {
-    console.error('❌ [API] 추천 업무 가져오기 실패:', error);
-    return {
+        return {
       type: 'error',
-      data: '추천 업무를 가져오는데 실패했습니다. 😢'
+      data: '업무 플래닝을 가져오는데 실패했습니다. 😢'
     };
   }
 }
@@ -156,9 +143,7 @@ export async function getTodayPlan() {
  */
 async function generateWeeklyReport() {
   try {
-    console.log('🔄 [API] /weekly_report/generate 호출 중...');
-    
-    const response = await fetch(`${API_BASE}/weekly_report/generate`, {
+        const response = await fetch(`${API_BASE}/weekly_report/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -174,15 +159,12 @@ async function generateWeeklyReport() {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 주간 보고서 생성 완료');
-    
-    return {
+        return {
       type: 'text',
       data: `📊 주간 보고서가 생성되었습니다!\n\n기간: ${data.start_date} ~ ${data.end_date}\n완료 업무: ${data.total_tasks || 0}개`
     };
   } catch (error) {
-    console.error('❌ [API] 주간 보고서 생성 실패:', error);
-    return {
+        return {
       type: 'text',
       data: '주간 보고서 생성 중 오류가 발생했습니다. 😢'
     };
@@ -194,9 +176,7 @@ async function generateWeeklyReport() {
  */
 async function generateMonthlyReport() {
   try {
-    console.log('🔄 [API] /monthly_report/generate 호출 중...');
-    
-    const now = new Date();
+        const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     
@@ -217,15 +197,12 @@ async function generateMonthlyReport() {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 월간 보고서 생성 완료');
-    
-    return {
+        return {
       type: 'text',
       data: `📈 월간 보고서가 생성되었습니다!\n\n기간: ${year}년 ${month}월\n완료 업무: ${data.total_tasks || 0}개`
     };
   } catch (error) {
-    console.error('❌ [API] 월간 보고서 생성 실패:', error);
-    return {
+        return {
       type: 'text',
       data: '월간 보고서 생성 중 오류가 발생했습니다. 😢'
     };
@@ -237,9 +214,7 @@ async function generateMonthlyReport() {
  */
 async function generateYearlyReport() {
   try {
-    console.log('🔄 [API] /performance_report/generate 호출 중...');
-    
-    const year = new Date().getFullYear();
+        const year = new Date().getFullYear();
     
     const response = await fetch(`${API_BASE}/performance_report/generate`, {
       method: 'POST',
@@ -257,15 +232,12 @@ async function generateYearlyReport() {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 실적 보고서 생성 완료');
-    
-    return {
+        return {
       type: 'text',
       data: `📋 ${year}년 실적 보고서가 생성되었습니다!\n\n총 업무: ${data.total_tasks || 0}개\n총 근무일: ${data.total_days || 0}일`
     };
   } catch (error) {
-    console.error('❌ [API] 실적 보고서 생성 실패:', error);
-    return {
+        return {
       type: 'text',
       data: '실적 보고서 생성 중 오류가 발생했습니다. 😢'
     };
@@ -277,9 +249,7 @@ async function generateYearlyReport() {
  */
 export async function saveSelectedTasks(owner, targetDate, tasks) {
   try {
-    console.log('🔄 [API] /daily/select_main_tasks 호출 중...');
-    
-    const response = await fetch(`${API_BASE}/daily/select_main_tasks`, {
+        const response = await fetch(`${API_BASE}/daily/select_main_tasks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -296,16 +266,13 @@ export async function saveSelectedTasks(owner, targetDate, tasks) {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 업무 저장 완료:', data);
-    
-    return {
+        return {
       success: true,
       saved_count: tasks.length,
       data: data
     };
   } catch (error) {
-    console.error('❌ [API] 업무 저장 실패:', error);
-    return {
+        return {
       success: false,
       message: error.message
     };
@@ -317,9 +284,7 @@ export async function saveSelectedTasks(owner, targetDate, tasks) {
  */
 export async function updateMainTasks(owner, targetDate, tasks) {
   try {
-    console.log('🔄 [API] /daily/update_main_tasks 호출 중...');
-    
-    const response = await fetch(`${API_BASE}/daily/update_main_tasks`, {
+        const response = await fetch(`${API_BASE}/daily/update_main_tasks`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -336,16 +301,13 @@ export async function updateMainTasks(owner, targetDate, tasks) {
     }
     
     const data = await response.json();
-    console.log('✅ [API] 업무 수정 완료:', data);
-    
-    return {
+        return {
       success: true,
       updated_count: tasks.length,
       data: data
     };
   } catch (error) {
-    console.error('❌ [API] 업무 수정 실패:', error);
-    return {
+        return {
       success: false,
       message: error.message
     };

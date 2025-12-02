@@ -12,7 +12,7 @@ from calendar import monthrange
 from app.domain.report.core.canonical_models import CanonicalReport, CanonicalMonthly
 from app.domain.report.weekly.repository import WeeklyReportRepository
 from app.domain.report.daily.repository import DailyReportRepository
-from app.infrastructure.vector_store_advanced import get_vector_store
+from app.infrastructure.vector_store_report import get_report_vector_store
 from app.domain.report.search.retriever import UnifiedRetriever
 from app.llm.client import get_llm
 from app.core.config import settings
@@ -69,7 +69,7 @@ def generate_monthly_report(
     
     # 3. 벡터DB에서 해당 월의 일일보고서 청크 검색
     import os
-    vector_store = get_vector_store()
+    vector_store = get_report_vector_store()
     collection = vector_store.get_collection()
     embedding_model_type = os.getenv("REPORT_EMBEDDING_MODEL_TYPE", "hf")
     retriever = UnifiedRetriever(

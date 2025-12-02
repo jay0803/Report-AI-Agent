@@ -6,7 +6,7 @@ import os
 from typing import List, Dict, Any, Optional
 from sentence_transformers import SentenceTransformer
 
-from app.infrastructure.vector_store_advanced import get_vector_store
+from app.infrastructure.vector_store_report import get_report_vector_store
 
 
 # 기본 모델 설정
@@ -18,17 +18,18 @@ BATCH_SIZE = 100
 class EmbeddingPipeline:
     """임베딩 파이프라인"""
     
-    def __init__(self, model_name: Optional[str] = None):
+    def __init__(self, model_name: Optional[str] = None, vector_store=None):
         """
         초기화
         
         Args:
             model_name: Hugging Face 모델명 (None이면 기본값 사용)
+            vector_store: Vector Store 인스턴스 (None이면 기본 vector store 사용)
         """
         self.model_name = model_name or DEFAULT_MODEL
         self.model = SentenceTransformer(self.model_name)
         self.dimension = DEFAULT_DIMENSION
-        self.vector_store = get_vector_store()
+        self.vector_store = vector_store or get_report_vector_store()
     
     def embed_texts(self, texts: List[str], batch_size: int = BATCH_SIZE) -> List[List[float]]:
         """

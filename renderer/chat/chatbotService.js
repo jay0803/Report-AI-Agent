@@ -15,8 +15,7 @@ let accessToken = null;
  */
 export function initChatbotService(token) {
   accessToken = token;
-  console.log('✅ 챗봇 서비스 - 액세스 토큰 설정 완료');
-}
+  }
 
 /**
  * 세션 ID 가져오기 (없으면 새로 생성)
@@ -50,10 +49,8 @@ export async function getOrCreateSession() {
       sessionId = data.session_id;
       localStorage.setItem(SESSION_KEY, sessionId);
       
-      console.log('✅ 새 챗봇 세션 생성:', sessionId);
-    } catch (error) {
-      console.error('❌ 세션 생성 오류:', error);
-      throw error;
+          } catch (error) {
+            throw error;
     }
   }
   
@@ -70,10 +67,7 @@ export async function sendChatMessage(userMessage) {
     // 일반 질문은 기존 챗봇 API 사용
     let sessionId = await getOrCreateSession();
     
-    console.log('📨 챗봇 메시지 전송:', userMessage);
-    console.log('🔍 세션 ID:', sessionId);
-    
-    const headers = {
+            const headers = {
       'Content-Type': 'application/json',
     };
     
@@ -94,9 +88,7 @@ export async function sendChatMessage(userMessage) {
     
     // 404 에러 = 세션이 백엔드에 없음 (재시작 등으로 메모리에서 삭제됨)
     if (response.status === 404) {
-      console.warn('⚠️  세션이 만료되었습니다. 새 세션을 생성합니다.');
-      
-      // localStorage의 오래된 세션 삭제
+            // localStorage의 오래된 세션 삭제
       localStorage.removeItem(SESSION_KEY);
       
       // 새 세션 생성
@@ -126,8 +118,7 @@ export async function sendChatMessage(userMessage) {
       }
       
       const retryResult = await retryResponse.json();
-      console.log('🤖 챗봇 응답 (재시도):', retryResult);
-      return retryResult.assistant_message;
+            return retryResult.assistant_message;
     }
     
     if (!response.ok) {
@@ -135,12 +126,9 @@ export async function sendChatMessage(userMessage) {
     }
     
     const result = await response.json();
-    console.log('🤖 챗봇 응답:', result);
-    
-    return result.assistant_message;
+        return result.assistant_message;
   } catch (error) {
-    console.error('❌ Chatbot API 오류:', error);
-    throw error;
+        throw error;
   }
 }
 
@@ -167,8 +155,7 @@ export async function getChatHistory() {
     const result = await response.json();
     return result.messages || [];
   } catch (error) {
-    console.error('❌ 히스토리 조회 오류:', error);
-    return [];
+        return [];
   }
 }
 
@@ -186,9 +173,7 @@ export async function deleteChatSession() {
     });
     
     localStorage.removeItem(SESSION_KEY);
-    console.log('✅ 챗봇 세션 삭제 완료');
-  } catch (error) {
-    console.error('❌ 세션 삭제 오류:', error);
-  }
+      } catch (error) {
+      }
 }
 

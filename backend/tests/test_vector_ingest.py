@@ -20,7 +20,7 @@ from app.domain.report.daily.repository import DailyReportRepository
 from app.domain.report.core.schemas import CanonicalReport
 from app.infrastructure.database.session import SessionLocal
 from ingestion.auto_ingest import ingest_single_report
-from ingestion.chroma_client import get_chroma_service
+from app.infrastructure.vector_store_report import get_report_vector_store
 
 
 def test_vector_ingest():
@@ -79,13 +79,13 @@ def test_vector_ingest():
         
         # 4. 벡터DB에서 확인
         print("\n📦 벡터DB 컬렉션 확인...")
-        chroma_service = get_chroma_service()
-        collection = chroma_service.get_or_create_collection(name="daily_reports_advanced")
+        vector_store = get_report_vector_store()
+        collection = vector_store.get_collection()
         
         # 해당 날짜의 문서 검색
         date_str = str(db_report.date)
         results = collection.get(
-            where={"period_start": date_str},
+            where={"date": date_str},
             limit=10
         )
         

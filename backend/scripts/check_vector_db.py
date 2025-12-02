@@ -1,7 +1,7 @@
 """
 벡터 DB 확인 스크립트
 
-daily_reports_advanced 컬렉션에 데이터가 있는지 확인합니다. (로컬 ChromaDB)
+reports 컬렉션에 데이터가 있는지 확인합니다. (로컬 ChromaDB)
 """
 import sys
 import os
@@ -19,15 +19,15 @@ if sys.platform == "win32":
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.infrastructure.vector_store_advanced import get_vector_store
+from app.infrastructure.vector_store_report import get_report_vector_store
 
 try:
     print("=" * 60)
     print("📊 벡터 DB 상태 확인 (로컬 ChromaDB)")
     print("=" * 60)
     
-    # Advanced Vector Store 가져오기
-    vector_store = get_vector_store()
+    # Report Vector Store 가져오기
+    vector_store = get_report_vector_store()
     collection = vector_store.get_collection()
     count = collection.count()
     
@@ -54,7 +54,7 @@ try:
     else:
         print(f"\n⚠️  벡터 DB가 비어있습니다!")
         print(f"\n데이터 추가 방법:")
-        print(f"  python backend/run_advanced_ingestion.py --model-type hf")
+        print(f"  python -m ingestion.ingest_mock_reports")
     
     print("\n" + "=" * 60)
     

@@ -33,9 +33,7 @@ export function isDailyStartTrigger(text) {
  * @returns {Promise<void>}
  */
 export async function handleDailyStart(addMessage, chatInput) {
-  console.log('📝 일일보고서 FSM 시작...');
-  
-  try {
+    try {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     const response = await fetch(`${API_BASE_URL}/daily/start`, {
@@ -54,8 +52,8 @@ export async function handleDailyStart(addMessage, chatInput) {
       
       // main_tasks가 없는 경우 (400 에러)
       if (response.status === 400 && errorData.detail && errorData.detail.includes('금일 업무 계획')) {
-        addMessage('assistant', '⚠️ 금일 업무 계획이 설정되지 않았습니다.\n\n먼저 "오늘 추천 업무" 기능을 사용하여 오늘의 업무를 설정해주세요. 📋');
-        // 추천 업무 기능으로 자동 이동 (taskService의 getTodayPlan 호출)
+        addMessage('assistant', '⚠️ 금일 업무 계획이 설정되지 않았습니다.\n\n먼저 "오늘 업무 플래닝" 기능을 사용하여 오늘의 업무를 설정해주세요. 📋');
+        // 업무 플래닝 기능으로 자동 이동 (taskService의 getTodayPlan 호출)
         const { getTodayPlan } = await import('./taskService.js');
         await getTodayPlan();
         return;
@@ -65,9 +63,7 @@ export async function handleDailyStart(addMessage, chatInput) {
     }
     
     const result = await response.json();
-    console.log('✅ FSM 시작 완료:', result);
-    
-    // FSM 모드로 전환
+        // FSM 모드로 전환
     chatMode = 'daily_fsm';
     dailySessionId = result.session_id;
     
@@ -80,8 +76,7 @@ export async function handleDailyStart(addMessage, chatInput) {
     addMessage('assistant', result.question);
     
   } catch (error) {
-    console.error('❌ FSM 시작 오류:', error);
-    addMessage('assistant', '일일보고서를 시작하는 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '일일보고서를 시작하는 중 오류가 발생했습니다. 😢');
   }
 }
 
@@ -93,9 +88,7 @@ export async function handleDailyStart(addMessage, chatInput) {
  * @returns {Promise<void>}
  */
 export async function handleDailyAnswer(answer, addMessage, chatInput) {
-  console.log('📝 FSM 답변 전송:', answer);
-  
-  try {
+    try {
     const response = await fetch(`${API_BASE_URL}/daily/answer`, {
       method: 'POST',
       headers: {
@@ -112,9 +105,7 @@ export async function handleDailyAnswer(answer, addMessage, chatInput) {
     }
     
     const result = await response.json();
-    console.log('✅ FSM 답변 처리 완료:', result);
-    
-    if (result.status === 'finished') {
+        if (result.status === 'finished') {
       // 완료 처리
       addMessage('assistant', result.message || '일일보고서 작성이 완료되었습니다! 🙌');
       
@@ -136,8 +127,7 @@ export async function handleDailyAnswer(answer, addMessage, chatInput) {
     }
     
   } catch (error) {
-    console.error('❌ FSM 답변 오류:', error);
-    addMessage('assistant', '답변 처리 중 오류가 발생했습니다. 😢');
+        addMessage('assistant', '답변 처리 중 오류가 발생했습니다. 😢');
   }
 }
 

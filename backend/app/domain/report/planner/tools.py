@@ -49,7 +49,15 @@ class YesterdayReportTool:
             }
         """
         # 전날 날짜 계산
-        yesterday = target_date - timedelta(days=1)
+        # 월요일(weekday=0)인 경우 전주 금요일로 계산
+        weekday = target_date.weekday()  # 0=월요일, 6=일요일
+        if weekday == 0:  # 월요일
+            # 전주 금요일 (3일 전)
+            yesterday = target_date - timedelta(days=3)
+            print(f"[DEBUG] YesterdayReportTool: 월요일 감지 - 전주 금요일({yesterday}) 사용")
+        else:
+            yesterday = target_date - timedelta(days=1)
+        
         yesterday_str = yesterday.isoformat()
         
         print(f"[DEBUG] YesterdayReportTool: owner={owner}, target_date={target_date}, yesterday={yesterday}")

@@ -28,7 +28,7 @@ class TodayPlanRequest(BaseModel):
 
 class TodayPlanResponse(BaseModel):
     """오늘 일정 생성 응답"""
-    tasks: List[TaskItem] = Field(default_factory=list, description="추천 작업 목록")
+    tasks: List[TaskItem] = Field(default_factory=list, description="플래닝 작업 목록")
     summary: str = Field("", description="전체 요약")
     source_date: Optional[str] = Field(None, description="참고한 전날 날짜")
     owner: str = Field("", description="작성자")

@@ -14,6 +14,7 @@ def extract_customer_names(text: str) -> List[str]:
         "라유하 고객 상담 자료 정리" → ["라유하"]
         "노지유 고객 보장안 구성" → ["노지유"]
         "문세아 고객 리포트 작성" → ["문세아"]
+        "박시엘 고객 상담 언제 했었지?" → ["박시엘"] (상담 제외)
     
     Args:
         text: 추출할 텍스트
@@ -21,7 +22,17 @@ def extract_customer_names(text: str) -> List[str]:
     Returns:
         고객명 리스트
     """
-    # 패턴 1: "이름 고객" 형식
+    # 제외할 일반 단어 목록 (고객명이 아닌 단어)
+    excluded_words = {
+        "상담", "상담한", "상담했", "상담할", "상담하",  # 동사 형태
+        "보장", "리포트", "자료", "정리", "구성", "작성", "분석", 
+        "업무", "일정", "계획", "예정", "대기", "요청", "문의", "처리",
+        "고객", "최근", "언제", "했었", "했지", "했어", "했는", "했던",
+        "뽑아줘", "뽑아", "날짜", "다", "전부", "모두", "모든",  # 질문/요청 단어
+        "알려줘", "알려", "찾아줘", "찾아"
+    }
+    
+    # 패턴 1: "이름 고객" 형식 (가장 정확)
     pattern1 = r'([가-힣]{2,4})\s*고객'
     matches1 = re.findall(pattern1, text)
     
@@ -40,8 +51,17 @@ def extract_customer_names(text: str) -> List[str]:
     # 모든 매치 합치기
     all_matches = matches1 + matches2 + matches3 + matches4
     
-    # 중복 제거 및 2-4자 이름만 필터링
-    unique_names = list(set([name for name in all_matches if 2 <= len(name) <= 4]))
+    # 중복 제거 및 필터링
+    unique_names = []
+    for name in all_matches:
+        # 2-4자 이름만 허용
+        if 2 <= len(name) <= 4:
+            # 제외 단어 목록에 없는 경우만 추가
+            if name not in excluded_words:
+                unique_names.append(name)
+    
+    # 중복 제거
+    unique_names = list(set(unique_names))
     
     return unique_names
 

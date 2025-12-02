@@ -1,5 +1,5 @@
 """
-daily_reports_advanced 컬렉션의 실제 메타데이터 확인
+reports 컬렉션의 실제 메타데이터 확인
 """
 import sys
 from pathlib import Path
@@ -8,14 +8,14 @@ from collections import Counter
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.infrastructure.vector_store_advanced import get_vector_store
+from app.infrastructure.vector_store_report import get_report_vector_store
 
 try:
-    vector_store = get_vector_store()
+    vector_store = get_report_vector_store()
     collection = vector_store.get_collection()
     
     print("=" * 80)
-    print(f"daily_reports_advanced 컬렉션 메타데이터 분석")
+    print(f"reports 컬렉션 메타데이터 분석")
     print("=" * 80)
     print(f"총 문서 수: {collection.count()}개\n")
     
